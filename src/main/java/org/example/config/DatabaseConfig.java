@@ -43,10 +43,14 @@ public class DatabaseConfig {
         // Fallback to standard Spring environment variables
         String url = env.getProperty("SPRING_DATASOURCE_URL");
         if (url == null || url.isEmpty()) {
-            throw new IllegalStateException(
-                "DATABASE CONNECTION FAILED: Neither 'DATABASE_URL' nor 'SPRING_DATASOURCE_URL' environment variables are set in the backend service. " +
-                "Please go to your Spring Boot service settings on Railway, select the 'Variables' tab, and ensure you have linked your PostgreSQL database service variables."
-            );
+            // Log a warning and fall back to in-memory H2 database
+            System.err.println("WARN: No production database URL detected (DATABASE_URL/SPRING_DATASOURCE_URL is empty). Falling back to zero-config in-memory H2 database.");
+            return DataSourceBuilder.create()
+                    .url("jdbc:h2:mem:sudokudb;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE")
+                    .username("sa")
+                    .password("")
+                    .driverClassName("org.h2.Driver")
+                    .build();
         }
 
         String username = env.getProperty("SPRING_DATASOURCE_USERNAME");
