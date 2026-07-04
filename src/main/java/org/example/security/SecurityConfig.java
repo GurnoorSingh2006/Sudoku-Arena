@@ -48,6 +48,7 @@ public class SecurityConfig {
                         // ===========================
                         .requestMatchers(
                                 "/",
+                                "/hello",
                                 "/ping",
 
                                 "/api/auth/**",

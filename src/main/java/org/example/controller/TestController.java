@@ -6,8 +6,8 @@ import org.springframework.web.bind.annotation.RestController;
 @RestController
 public class TestController {
 
-    @GetMapping("/hello")
+    @GetMapping({"/", "/hello"})
     public String hello() {
-        return "Hello Railway!";
+        return "Sudoku Arena API is running!";
     }
 }
