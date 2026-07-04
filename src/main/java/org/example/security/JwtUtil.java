@@ -3,6 +3,7 @@ package org.example.security;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.security.Keys;
+import jakarta.annotation.PostConstruct;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
@@ -21,6 +22,16 @@ public class JwtUtil {
 
     @Value("${jwt.expiration}")
     private Long expiration;
+
+    @PostConstruct
+    public void init() {
+        // If expiration is less than 100 days in seconds (8,640,000), 
+        // it is likely configured in seconds. Convert to milliseconds.
+        if (expiration != null && expiration < 8640000L) {
+            System.out.println("JWT Expiration is set to " + expiration + " seconds. Converting to " + (expiration * 1000L) + " milliseconds for compatibility.");
+            expiration = expiration * 1000L;
+        }
+    }
 
     private SecretKey getSigningKey() {
         return Keys.hmacShaKeyFor(secret.getBytes(StandardCharsets.UTF_8));

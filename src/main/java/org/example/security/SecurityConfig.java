@@ -52,6 +52,7 @@ public class SecurityConfig {
                                 "/ping",
 
                                 "/api/auth/**",
+                                "/api/leaderboard/**",
 
                                 "/ws/**",
                                 "/ws",
