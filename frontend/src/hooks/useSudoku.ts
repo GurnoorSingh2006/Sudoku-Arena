@@ -30,6 +30,7 @@ export function useSudoku(
   const [timerSeconds, setTimerSeconds] = useState<number>(0);
   const [isPaused, setIsPaused] = useState<boolean>(false);
   const [isCompleted, setIsCompleted] = useState<boolean>(false);
+  const [isGameOver, setIsGameOver] = useState<boolean>(false);
 
   // Undo/Redo double-stack
   const undoStack = useRef<SudokuState[]>([]);
@@ -49,6 +50,7 @@ export function useSudoku(
     setTimerSeconds(0);
     setIsPaused(false);
     setIsCompleted(false);
+    setIsGameOver(false);
     undoStack.current = [];
     redoStack.current = [];
   }, [JSON.stringify(initialGrid)]);
@@ -91,7 +93,7 @@ export function useSudoku(
   };
 
   const selectCell = (row: number, col: number) => {
-    if (isPaused || isCompleted) return;
+    if (isPaused || isCompleted || isGameOver) return;
     setSelectedCell({ row, col });
     const cellVal = board[row][col];
     setSelectedNumber(cellVal !== 0 ? cellVal : null);
@@ -99,7 +101,7 @@ export function useSudoku(
   };
 
   const selectNumber = (num: number) => {
-    if (isPaused || isCompleted) return;
+    if (isPaused || isCompleted || isGameOver) return;
     setSelectedNumber(num);
     
     // If a cell is currently selected, write into it
@@ -109,6 +111,7 @@ export function useSudoku(
   };
 
   const enterNumberAt = (row: number, col: number, num: number) => {
+    if (isPaused || isCompleted || isGameOver) return;
     // Original locked cells cannot be modified
     if (initialGrid[row][col] !== 0) return;
 
@@ -153,6 +156,10 @@ export function useSudoku(
         newMistakes = mistakeCount + 1;
         setMistakeCount(newMistakes);
         if (synth) synth.playMistake();
+        
+        if (newMistakes >= 3) {
+          setIsGameOver(true);
+        }
       } else if (num !== 0) {
         if (synth) synth.playChime();
       }
@@ -252,7 +259,7 @@ export function useSudoku(
   };
 
   const giveHint = () => {
-    if (isPaused || isCompleted) return;
+    if (isPaused || isCompleted || isGameOver) return;
     
     // Find target cell to hint
     let targetRow = -1;
@@ -321,16 +328,17 @@ export function useSudoku(
   };
 
   const resetPuzzle = () => {
-    if (isCompleted) return;
     const newBoard = initialGrid.map((row) => [...row]);
     const newNotes = Array(9).fill(null).map(() => Array(9).fill(null).map(() => []));
     
     saveState(newBoard, newNotes);
     setSelectedCell(null);
+    setMistakeCount(0);
+    setIsGameOver(false);
     if (synth) synth.playClick();
 
     if (onProgressUpdate) {
-      onProgressUpdate(getCompletedCellsCount(newBoard), mistakeCount);
+      onProgressUpdate(getCompletedCellsCount(newBoard), 0);
     }
   };
 
@@ -396,6 +404,7 @@ export function useSudoku(
     timerSeconds,
     isPaused,
     isCompleted,
+    isGameOver,
     autoCheck,
     setAutoCheck,
     selectCell,

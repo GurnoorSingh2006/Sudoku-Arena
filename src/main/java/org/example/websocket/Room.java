@@ -12,6 +12,7 @@ public class Room {
     private Map<String, RoomPlayer> players = new HashMap<>(); // key: username
     private String winnerUsername = null;
     private long startTimestamp = 0;
+    private String hostUsername;
 
     public Room() {}
 
@@ -46,4 +47,7 @@ public class Room {
 
     public long getStartTimestamp() { return startTimestamp; }
     public void setStartTimestamp(long startTimestamp) { this.startTimestamp = startTimestamp; }
+
+    public String getHostUsername() { return hostUsername; }
+    public void setHostUsername(String hostUsername) { this.hostUsername = hostUsername; }
 }

@@ -11,6 +11,7 @@ export default function LandingPage() {
   const router = useRouter();
   const [isLoggedIn, setIsLoggedIn] = useState(false);
   const [theme, setTheme] = useState("light");
+  const [openRule, setOpenRule] = useState<number | null>(null);
 
   useEffect(() => {
     // Check if user is logged in
@@ -189,35 +190,78 @@ export default function LandingPage() {
 
       </div>
 
+      {/* Masterclass Rules Section */}
+      <section className="max-w-4xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-16 z-10 relative">
+        <div className="text-center mb-10">
+          <span className="text-[10px] text-indigo-600 dark:text-indigo-400 font-extrabold tracking-widest uppercase">Quick Masterclass</span>
+          <h3 className="text-3xl font-black text-slate-800 dark:text-white mt-1">
+            Sudoku Arena Guidelines
+          </h3>
+        </div>
+        
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+          {[
+            {
+              title: "The Grid Structure",
+              desc: "The board consists of a 9x9 grid divided into nine 3x3 boxes. Fill empty cells with digits from 1 to 9."
+            },
+            {
+              title: "The Golden Rule",
+              desc: "Every row, column, and 3x3 subgrid must contain the digits 1 through 9 exactly once, without repetition."
+            },
+            {
+              title: "Candidate Notes",
+              desc: "Stuck? Toggle 'Note Mode' (pencil icon) to jot down candidates in empty cells to keep track of possibilities."
+            },
+            {
+              title: "Mistakes & Lives",
+              desc: "Both single-player and multiplayer matches feature a 3-lives limit. Reaching 3 mistakes ends the game!"
+            }
+          ].map((rule, idx) => (
+            <motion.div
+              key={idx}
+              whileHover={{ y: -3 }}
+              className="glass-panel p-5 rounded-2xl border border-slate-200/50 dark:border-slate-800/40 text-left hover:border-indigo-500/30 transition-all duration-300 shadow-sm"
+            >
+              <h4 className="font-extrabold text-sm text-indigo-600 dark:text-indigo-400 mb-1.5 flex items-center gap-2">
+                <span className="w-5 h-5 rounded-md bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 flex items-center justify-center text-xs font-black">{idx + 1}</span>
+                {rule.title}
+              </h4>
+              <p className="text-xs text-slate-500 dark:text-slate-400 leading-relaxed pl-7">{rule.desc}</p>
+            </motion.div>
+          ))}
+        </div>
+      </section>
+
       {/* Feature stats footer */}
-      <footer className="max-w-6xl mx-auto w-full px-4 sm:px-6 lg:px-8 border-t border-slate-200/50 dark:border-slate-800/40 py-8 grid grid-cols-1 md:grid-cols-3 gap-6 mt-12 text-center md:text-left z-10">
-        <div className="flex flex-col md:flex-row items-center gap-3">
-          <div className="p-2 bg-indigo-50 dark:bg-indigo-950/40 rounded-xl text-indigo-500">
+      <footer className="max-w-6xl mx-auto w-full px-4 sm:px-6 lg:px-8 border-t border-slate-200/50 dark:border-slate-800/40 py-10 grid grid-cols-1 md:grid-cols-3 gap-8 text-center md:text-left z-10">
+        <div className="flex flex-col md:flex-row items-center gap-4 p-4 rounded-2xl bg-white/30 dark:bg-slate-900/10 border border-slate-200/20 shadow-sm">
+          <div className="p-3 bg-indigo-50 dark:bg-indigo-950/40 rounded-xl text-indigo-500">
             <Zap className="w-5 h-5" />
           </div>
           <div>
-            <h4 className="font-bold text-sm">Instant Matchmaking</h4>
-            <p className="text-xs text-slate-400">Join friend lobbies in milliseconds</p>
+            <h4 className="font-extrabold text-sm">Instant Matchmaking</h4>
+            <p className="text-xs text-slate-400 mt-0.5">Join multiplayer lobbies in milliseconds</p>
           </div>
         </div>
 
-        <div className="flex flex-col md:flex-row items-center gap-3">
-          <div className="p-2 bg-purple-50 dark:bg-purple-950/40 rounded-xl text-purple-500">
+        <div className="flex flex-col md:flex-row items-center gap-4 p-4 rounded-2xl bg-white/30 dark:bg-slate-900/10 border border-slate-200/20 shadow-sm">
+          <div className="p-3 bg-purple-50 dark:bg-purple-950/40 rounded-xl text-purple-500">
             <Award className="w-5 h-5" />
           </div>
           <div>
-            <h4 className="font-bold text-sm">Competitive Leaderboards</h4>
-            <p className="text-xs text-slate-400">Rank up based on solve speed and accuracy</p>
+            <h4 className="font-extrabold text-sm">Competitive Leaderboards</h4>
+            <p className="text-xs text-slate-400 mt-0.5">Rank up based on solve speed and accuracy</p>
           </div>
         </div>
 
-        <div className="flex flex-col md:flex-row items-center gap-3">
-          <div className="p-2 bg-emerald-50 dark:bg-emerald-950/40 rounded-xl text-emerald-500">
+        <div className="flex flex-col md:flex-row items-center gap-4 p-4 rounded-2xl bg-white/30 dark:bg-slate-900/10 border border-slate-200/20 shadow-sm">
+          <div className="p-3 bg-emerald-50 dark:bg-emerald-950/40 rounded-xl text-emerald-500">
             <ShieldAlert className="w-5 h-5" />
           </div>
           <div>
-            <h4 className="font-bold text-sm">Anti-Cheat Validation</h4>
-            <p className="text-xs text-slate-400">Verification calculations are executed server-side</p>
+            <h4 className="font-extrabold text-sm">Anti-Cheat Validation</h4>
+            <p className="text-xs text-slate-400 mt-0.5">Verification calculations are executed server-side</p>
           </div>
         </div>
       </footer>

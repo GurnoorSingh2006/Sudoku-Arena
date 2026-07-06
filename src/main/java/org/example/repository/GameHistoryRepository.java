@@ -17,4 +17,6 @@ public interface GameHistoryRepository extends JpaRepository<GameHistory, Long> 
     // Fetch the fastest solve times globally for a given difficulty
     @Query("SELECT gh FROM GameHistory gh WHERE gh.difficulty = :difficulty AND gh.win = true ORDER BY gh.solveTimeSeconds ASC")
     List<GameHistory> findTopScoresByDifficulty(String difficulty, Pageable pageable);
+
+    boolean existsByUserAndDifficultyAndCompletedAtGreaterThanEqual(User user, String difficulty, java.time.LocalDateTime completedAt);
 }

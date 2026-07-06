@@ -90,6 +90,7 @@ public class ProfileController {
                 case "medium" -> dbUser.setMediumPuzzlesSolved(dbUser.getMediumPuzzlesSolved() + 1);
                 case "hard" -> dbUser.setHardPuzzlesSolved(dbUser.getHardPuzzlesSolved() + 1);
                 case "expert" -> dbUser.setExpertPuzzlesSolved(dbUser.getExpertPuzzlesSolved() + 1);
+                case "daily" -> dbUser.setDailyChallengesSolved(dbUser.getDailyChallengesSolved() + 1);
             }
         }
 

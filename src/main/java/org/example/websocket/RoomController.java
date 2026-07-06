@@ -61,6 +61,19 @@ public class RoomController {
     }
 
     /**
+     * WebSocket: Host triggers the match start countdown.
+     */
+    @MessageMapping("/room/start-countdown")
+    public void startCountdown(StartCountdownPayload payload) {
+        try {
+            Room room = roomManager.startCountdown(payload.getRoomCode(), payload.getUsername());
+            broadcastRoomState(room);
+        } catch (Exception e) {
+            System.err.println("Error starting countdown: " + e.getMessage());
+        }
+    }
+
+    /**
      * WebSocket: Starts the game when the client countdown completes.
      */
     @MessageMapping("/room/start")
@@ -244,6 +257,16 @@ public class RoomController {
     }
 
     public static class LeavePayload {
+        private String roomCode;
+        private String username;
+
+        public String getRoomCode() { return roomCode; }
+        public void setRoomCode(String roomCode) { this.roomCode = roomCode; }
+        public String getUsername() { return username; }
+        public void setUsername(String username) { this.username = username; }
+    }
+
+    public static class StartCountdownPayload {
         private String roomCode;
         private String username;
 

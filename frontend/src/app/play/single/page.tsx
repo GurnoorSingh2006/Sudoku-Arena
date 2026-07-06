@@ -40,7 +40,12 @@ function SinglePlayerGameContent() {
     const fetchPuzzle = async () => {
       try {
         setLoading(true);
-        const data = await apiFetch(`/api/sudoku/generate?difficulty=${difficulty}`);
+        let data;
+        if (difficulty === "Daily") {
+          data = await apiFetch("/api/sudoku/daily");
+        } else {
+          data = await apiFetch(`/api/sudoku/generate?difficulty=${difficulty}`);
+        }
         setInitialBoard(data.board);
         setSolutionBoard(data.solution);
       } catch (err) {
@@ -66,6 +71,7 @@ function SinglePlayerGameContent() {
     timerSeconds,
     isPaused,
     isCompleted,
+    isGameOver,
     selectCell,
     selectNumber,
     enterNumber,
@@ -170,7 +176,14 @@ function SinglePlayerGameContent() {
         </div>
         <div className="flex items-center gap-1.5 justify-center border-x border-slate-200/50 dark:border-slate-800/40">
           <XCircle className="w-4 h-4 text-rose-500" />
-          <span>Mistakes: {mistakeCount}</span>
+          <span className="flex items-center gap-0.5">
+            Lives: 
+            {Array.from({ length: 3 }).map((_, i) => (
+              <span key={i} className={`text-xs ${i < 3 - mistakeCount ? "opacity-100" : "opacity-25"}`}>
+                ❤️
+              </span>
+            ))}
+          </span>
         </div>
         <div className="flex items-center gap-1.5 justify-center">
           <HelpCircle className="w-4 h-4 text-amber-500" />
@@ -242,6 +255,48 @@ function SinglePlayerGameContent() {
           </button>
         </div>
       </main>
+
+      {/* Game Over Modal (3 Mistakes) */}
+      <AnimatePresence>
+        {isGameOver && (
+          <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 dark:bg-slate-950/80 backdrop-blur-md p-4">
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="glass-panel max-w-sm w-full rounded-2xl p-6 border border-slate-200/50 dark:border-slate-800/40 text-center shadow-2xl"
+            >
+              <div className="w-16 h-16 rounded-full bg-rose-100 dark:bg-rose-950/50 text-rose-600 dark:text-rose-400 flex items-center justify-center mx-auto mb-4 border border-rose-200/20 animate-bounce">
+                <XCircle className="w-8 h-8" />
+              </div>
+              <h3 className="text-2xl font-extrabold text-slate-900 dark:text-white">
+                GAME OVER!
+              </h3>
+              <p className="text-slate-400 text-sm mt-1">You made 3 mistakes and ran out of lives.</p>
+
+              {/* Action options */}
+              <div className="space-y-2 mt-6">
+                <button
+                  onClick={() => {
+                    if (synth) synth.playClick();
+                    resetPuzzle();
+                  }}
+                  className="w-full py-3.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-bold shadow-md shadow-rose-500/20 active:scale-[0.98] transition-all cursor-pointer"
+                >
+                  Try Again
+                </button>
+                
+                <button
+                  onClick={handleReturnToDashboard}
+                  className="w-full flex items-center justify-center gap-2 py-3.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 rounded-xl font-bold transition-all cursor-pointer"
+                >
+                  <Home className="w-4 h-4" /> Go to Dashboard
+                </button>
+              </div>
+            </motion.div>
+          </div>
+        )}
+      </AnimatePresence>
 
       {/* Results Modal */}
       <AnimatePresence>

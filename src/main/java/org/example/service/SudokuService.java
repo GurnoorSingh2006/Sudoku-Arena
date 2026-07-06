@@ -14,16 +14,26 @@ public class SudokuService {
 
     /**
      * Generates a new Sudoku puzzle of the specified difficulty.
-     * Easy: ~46 clues
-     * Medium: ~36 clues
-     * Hard: ~28 clues
-     * Expert: ~20 clues
      */
     public SudokuPuzzleDto generatePuzzle(String difficulty) {
+        return generatePuzzle(difficulty, this.random);
+    }
+
+    /**
+     * Generates a seeded Sudoku puzzle of the specified difficulty for daily challenge.
+     */
+    public SudokuPuzzleDto generatePuzzleWithSeed(String difficulty, long seed) {
+        return generatePuzzle(difficulty, new Random(seed));
+    }
+
+    /**
+     * Core generator that accepts a Random instance.
+     */
+    public SudokuPuzzleDto generatePuzzle(String difficulty, Random rnd) {
         int[][] solvedBoard = new int[9][9];
         // Generate a fully filled board
-        fillDiagonalBoxes(solvedBoard);
-        solveBoard(solvedBoard, 0, 0);
+        fillDiagonalBoxes(solvedBoard, rnd);
+        solveBoard(solvedBoard, 0, 0, rnd);
 
         // Copy the solved board as the solution
         int[][] solution = copyBoard(solvedBoard);
@@ -37,24 +47,23 @@ public class SudokuService {
             default -> 36;
         };
 
-        int[][] puzzleBoard = removeNumbers(solvedBoard, cluesToKeep);
+        int[][] puzzleBoard = removeNumbers(solvedBoard, cluesToKeep, rnd);
         return new SudokuPuzzleDto(puzzleBoard, solution, difficulty);
     }
 
     /**
      * Fills the three diagonal 3x3 boxes (top-left, middle, bottom-right).
-     * These boxes are independent of each other, making generation much faster.
      */
-    private void fillDiagonalBoxes(int[][] board) {
+    private void fillDiagonalBoxes(int[][] board, Random rnd) {
         for (int i = 0; i < 9; i += 3) {
-            fillBox(board, i, i);
+            fillBox(board, i, i, rnd);
         }
     }
 
-    private void fillBox(int[][] board, int row, int col) {
+    private void fillBox(int[][] board, int row, int col, Random rnd) {
         List<Integer> nums = new ArrayList<>();
         for (int i = 1; i <= 9; i++) nums.add(i);
-        Collections.shuffle(nums, random);
+        Collections.shuffle(nums, rnd);
 
         int index = 0;
         for (int i = 0; i < 3; i++) {
@@ -67,19 +76,19 @@ public class SudokuService {
     /**
      * Standard solver to fill the board.
      */
-    public boolean solveBoard(int[][] board, int row, int col) {
+    public boolean solveBoard(int[][] board, int row, int col, Random rnd) {
         if (row == 9) return true;
-        if (col == 9) return solveBoard(board, row + 1, 0);
-        if (board[row][col] != 0) return solveBoard(board, row, col + 1);
+        if (col == 9) return solveBoard(board, row + 1, 0, rnd);
+        if (board[row][col] != 0) return solveBoard(board, row, col + 1, rnd);
 
         List<Integer> nums = new ArrayList<>();
         for (int i = 1; i <= 9; i++) nums.add(i);
-        Collections.shuffle(nums, random);
+        Collections.shuffle(nums, rnd);
 
         for (int num : nums) {
             if (isSafe(board, row, col, num)) {
                 board[row][col] = num;
-                if (solveBoard(board, row, col + 1)) return true;
+                if (solveBoard(board, row, col + 1, rnd)) return true;
                 board[row][col] = 0;
             }
         }
@@ -107,7 +116,7 @@ public class SudokuService {
     /**
      * Removes numbers from the board while ensuring a unique solution.
      */
-    private int[][] removeNumbers(int[][] board, int cluesToKeep) {
+    private int[][] removeNumbers(int[][] board, int cluesToKeep, Random rnd) {
         int[][] puzzle = copyBoard(board);
         int cellsToRemove = 81 - cluesToKeep;
 
@@ -116,7 +125,7 @@ public class SudokuService {
         for (int i = 0; i < 81; i++) {
             cellPositions.add(i);
         }
-        Collections.shuffle(cellPositions, random);
+        Collections.shuffle(cellPositions, rnd);
 
         int removedCount = 0;
         for (int pos : cellPositions) {

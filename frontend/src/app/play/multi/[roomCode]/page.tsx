@@ -31,6 +31,7 @@ interface Room {
   players: Record<string, RoomPlayer>;
   winnerUsername: string | null;
   startTimestamp: number;
+  hostUsername: string;
 }
 
 export default function MultiplayerGamePage() {
@@ -157,6 +158,7 @@ export default function MultiplayerGamePage() {
     mistakeCount,
     timerSeconds,
     isCompleted,
+    isGameOver,
     selectCell,
     selectNumber,
     enterNumber,
@@ -200,6 +202,27 @@ export default function MultiplayerGamePage() {
       }
     }
   );
+
+  const [dismissedResults, setDismissedResults] = useState(false);
+
+  useEffect(() => {
+    if (room?.state !== "FINISHED") {
+      setDismissedResults(false);
+    }
+  }, [room?.state]);
+
+  const handleStartMatch = () => {
+    if (stompClient.current) {
+      if (synth) synth.playSuccess();
+      stompClient.current.publish({
+        destination: "/app/room/start-countdown",
+        body: JSON.stringify({
+          roomCode,
+          username: user.username,
+        }),
+      });
+    }
+  };
 
   const handleCopyLink = () => {
     if (typeof window !== "undefined") {
@@ -303,33 +326,55 @@ export default function MultiplayerGamePage() {
           {/* Players in room status */}
           <div className="space-y-3 text-left">
             <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 mb-2">
-              Players Joined ({players.length}/2)
+              Players Joined ({players.length}/10)
             </h4>
 
             {players.map((p) => (
-              <div key={p.username} className="flex items-center gap-3 p-3 bg-white/40 dark:bg-slate-950/20 border border-slate-200/30 rounded-xl">
-                <img
-                  src={p.avatarUrl || `https://api.dicebear.com/7.x/bottts/svg?seed=${p.username}`}
-                  alt="Avatar"
-                  className="w-9 h-9 rounded-lg bg-slate-100 dark:bg-slate-800 object-contain p-0.5"
-                />
-                <span className="text-sm font-bold text-slate-700 dark:text-slate-200">
-                  {p.username} {p.username === user.username && "(You)"}
-                </span>
+              <div key={p.username} className="flex items-center justify-between p-3 bg-white/40 dark:bg-slate-950/20 border border-slate-200/30 rounded-xl">
+                <div className="flex items-center gap-3">
+                  <img
+                    src={p.avatarUrl || `https://api.dicebear.com/7.x/bottts/svg?seed=${p.username}`}
+                    alt="Avatar"
+                    className="w-9 h-9 rounded-lg bg-slate-100 dark:bg-slate-800 object-contain p-0.5"
+                  />
+                  <span className="text-sm font-bold text-slate-700 dark:text-slate-200">
+                    {p.username} {p.username === user.username && "(You)"}
+                  </span>
+                </div>
+                {room.hostUsername === p.username && (
+                  <span className="text-[9.5px] px-2 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-400 font-bold border border-indigo-200/20">
+                    Host
+                  </span>
+                )}
               </div>
             ))}
 
-            {players.length < 2 && (
+            {players.length < 10 && (
               <div className="flex items-center gap-3 p-3 bg-dashed border-2 border-slate-200 dark:border-slate-800 rounded-xl opacity-60">
                 <div className="w-9 h-9 rounded-lg bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-400">
-                  ?
+                  +
                 </div>
                 <span className="text-sm text-slate-400 animate-pulse">
-                  Waiting for opponent...
+                  Waiting for more players to join...
                 </span>
               </div>
             )}
           </div>
+
+          {/* Lobby Actions */}
+          {room.hostUsername === user.username ? (
+            <button
+              onClick={handleStartMatch}
+              disabled={players.length < 2}
+              className="mt-6 w-full py-3.5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:opacity-95 text-white rounded-xl font-bold shadow-md shadow-indigo-500/20 active:scale-[0.98] transition-all disabled:opacity-50 cursor-pointer text-sm"
+            >
+              Start Match
+            </button>
+          ) : (
+            <div className="mt-6 w-full text-center py-3 bg-slate-100 dark:bg-slate-900/40 border border-slate-200/20 rounded-xl text-xs font-semibold text-slate-500 dark:text-slate-400 animate-pulse">
+              Waiting for Host ({room.hostUsername}) to start...
+            </div>
+          )}
         </motion.div>
       </div>
     );
@@ -380,63 +425,78 @@ export default function MultiplayerGamePage() {
       </header>
 
       {/* Real-time Multiplayer Progress Panels */}
-      <section className="max-w-[460px] w-full mx-auto grid grid-cols-2 gap-4 py-4 px-4 mb-4 rounded-2xl glass-panel border border-slate-200/50 dark:border-slate-800/40 text-xs">
-        
-        {/* Your stats */}
-        <div className="space-y-2">
-          <div className="flex items-center gap-2">
-            <img
-              src={user.avatarUrl}
-              alt="Avatar"
-              className="w-7 h-7 rounded-lg bg-slate-100 dark:bg-slate-800 object-contain p-0.5"
-            />
-            <div className="min-w-0">
-              <span className="font-bold text-slate-800 dark:text-slate-200 block truncate">You</span>
-              <span className="text-[10px] text-slate-400 block truncate">Mistakes: {me.mistakes}</span>
-            </div>
-          </div>
-          
-          <div className="flex items-center justify-between font-bold text-slate-600 dark:text-slate-400">
-            <span>Progress</span>
-            <span>{me.completionPercentage}%</span>
-          </div>
-          <div className="w-full bg-slate-200 dark:bg-slate-800 h-2 rounded-full overflow-hidden">
-            <div className="bg-indigo-600 h-full transition-all duration-300" style={{ width: `${me.completionPercentage}%` }} />
-          </div>
-        </div>
-
-        {/* Opponent stats */}
-        {opponent ? (
-          <div className="space-y-2 border-l border-slate-200/50 dark:border-slate-800/40 pl-4">
-            <div className="flex items-center gap-2">
-              <img
-                src={opponent.avatarUrl || `https://api.dicebear.com/7.x/bottts/svg?seed=${opponent.username}`}
-                alt="Avatar"
-                className="w-7 h-7 rounded-lg bg-slate-100 dark:bg-slate-800 object-contain p-0.5"
-              />
-              <div className="min-w-0">
-                <span className="font-bold text-slate-800 dark:text-slate-200 block truncate">{opponent.username}</span>
-                <span className="text-[10px] text-slate-400 block truncate">Mistakes: {opponent.mistakes}</span>
+      <section className="max-w-[460px] w-full mx-auto p-4 mb-4 rounded-2xl glass-panel border border-slate-200/50 dark:border-slate-800/40 text-xs">
+        <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-3">Live Scoreboard</h4>
+        <div className="grid grid-cols-2 gap-3 max-h-[120px] overflow-y-auto pr-1">
+          {players.map((p) => {
+            const isMe = p.username === user.username;
+            const isFailed = p.mistakes >= 3;
+            return (
+              <div key={p.username} className={`p-2.5 rounded-xl border flex flex-col gap-1.5 ${isMe ? "bg-indigo-500/10 border-indigo-500/25" : "bg-slate-100/50 dark:bg-slate-900/30 border-slate-200/30"}`}>
+                <div className="flex items-center gap-1.5 justify-between min-w-0">
+                  <div className="flex items-center gap-1.5 min-w-0">
+                    <img
+                      src={p.avatarUrl || `https://api.dicebear.com/7.x/bottts/svg?seed=${p.username}`}
+                      alt="Avatar"
+                      className="w-5 h-5 rounded bg-slate-100 dark:bg-slate-800 object-contain p-0.5"
+                    />
+                    <span className="font-bold text-slate-800 dark:text-slate-200 truncate">{isMe ? "You" : p.username}</span>
+                  </div>
+                  {p.finished && !isFailed && <span className="text-[9px] px-1 bg-emerald-500/25 text-emerald-600 dark:text-emerald-400 font-bold rounded">Done</span>}
+                  {isFailed && <span className="text-[9px] px-1 bg-rose-500/25 text-rose-600 dark:text-rose-400 font-bold rounded">Failed</span>}
+                </div>
+                
+                <div className="flex items-center justify-between text-[10px] font-bold text-slate-500">
+                  <span className="flex gap-0.5">
+                    {Array.from({ length: 3 }).map((_, idx) => (
+                      <span key={idx} className={idx < 3 - p.mistakes ? "text-rose-500" : "opacity-20"}>❤️</span>
+                    ))}
+                  </span>
+                  <span>{p.completionPercentage}%</span>
+                </div>
+                
+                <div className="w-full bg-slate-200 dark:bg-slate-800 h-1.5 rounded-full overflow-hidden">
+                  <div 
+                    className={`h-full transition-all duration-300 ${isFailed ? "bg-rose-500" : isMe ? "bg-indigo-600" : "bg-purple-600"}`} 
+                    style={{ width: `${p.completionPercentage}%` }} 
+                  />
+                </div>
               </div>
-            </div>
-
-            <div className="flex items-center justify-between font-bold text-slate-600 dark:text-slate-400">
-              <span>Progress</span>
-              <span>{opponent.completionPercentage}%</span>
-            </div>
-            <div className="w-full bg-slate-200 dark:bg-slate-800 h-2 rounded-full overflow-hidden">
-              <div className="bg-purple-600 h-full transition-all duration-300" style={{ width: `${opponent.completionPercentage}%` }} />
-            </div>
-          </div>
-        ) : (
-          <div className="flex items-center justify-center text-slate-400 text-center font-bold">
-            Opponent Disconnected
-          </div>
-        )}
+            );
+          })}
+        </div>
       </section>
 
+      {/* Minimized Match Results Banner */}
+      {room.state === "FINISHED" && dismissedResults && (
+        <div className="max-w-[460px] w-full mx-auto mb-4 p-3 bg-indigo-50/95 dark:bg-slate-900/90 border border-indigo-200/30 rounded-xl flex items-center justify-between text-xs font-semibold z-30 relative backdrop-blur-md">
+          <div className="flex items-center gap-2 text-slate-700 dark:text-slate-300">
+            <Trophy className="w-4 h-4 text-amber-500" />
+            <span>Match Finished: <strong>{room.winnerUsername || "No one"}</strong> won!</span>
+          </div>
+          <button
+            onClick={() => {
+              if (synth) synth.playClick();
+              setDismissedResults(false);
+            }}
+            className="px-2.5 py-1.5 bg-indigo-600 text-white rounded-lg font-bold hover:bg-indigo-700 transition-colors cursor-pointer"
+          >
+            View Results
+          </button>
+        </div>
+      )}
+
       {/* Main Grid Game screen */}
-      <main className="flex-1 flex flex-col justify-center">
+      <main className="flex-1 flex flex-col justify-center relative">
+        {/* Game Over / Failed Overlay */}
+        {isGameOver && (
+          <div className="absolute inset-0 z-20 flex items-center justify-center bg-slate-950/20 rounded-3xl p-4 backdrop-blur-[1px] pointer-events-none">
+            <div className="bg-rose-500/90 dark:bg-rose-950/95 text-white font-extrabold px-6 py-3 rounded-2xl shadow-xl flex items-center gap-2 text-center pointer-events-auto border border-rose-500/20 text-sm animate-pulse">
+              <XCircle className="w-5 h-5" /> Struck Out! Wait for other players.
+            </div>
+          </div>
+        )}
+
         <SudokuBoard
           board={board}
           notes={notes}
@@ -481,7 +541,7 @@ export default function MultiplayerGamePage() {
 
       {/* Multiplayer End-Game Results Modal */}
       <AnimatePresence>
-        {room.state === "FINISHED" && (
+        {room.state === "FINISHED" && !dismissedResults && (
           <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 dark:bg-slate-950/80 backdrop-blur-md p-4">
             <motion.div
               initial={{ scale: 0.9, opacity: 0 }}
@@ -494,18 +554,21 @@ export default function MultiplayerGamePage() {
               </div>
 
               <h3 className="text-2xl font-black text-slate-900 dark:text-white uppercase">
-                {room.winnerUsername === user.username ? "VICTORY!" : "DEFEAT"}
+                {room.winnerUsername === user.username ? "VICTORY!" : room.winnerUsername ? "DEFEAT" : "MATCH ENDED"}
               </h3>
               <p className="text-slate-400 text-xs mt-1">
                 {room.winnerUsername === user.username
                   ? "You solved the grid first!"
-                  : `${room.winnerUsername} solved the grid first!`}
+                  : room.winnerUsername
+                  ? `${room.winnerUsername} solved the grid first!`
+                  : "All players struck out."}
               </p>
 
               {/* Side-by-side Scoreboard comparisons */}
               <div className="my-6 space-y-3">
                 {players.map((p) => {
                   const isUserWinner = room.winnerUsername === p.username;
+                  const isPlayerFailed = p.mistakes >= 3;
                   return (
                     <div
                       key={p.username}
@@ -514,6 +577,8 @@ export default function MultiplayerGamePage() {
                         ${
                           isUserWinner
                             ? "bg-emerald-50/50 dark:bg-emerald-950/20 border-emerald-500/30"
+                            : isPlayerFailed
+                            ? "bg-rose-50/30 dark:bg-rose-950/10 border-rose-500/20 opacity-70"
                             : "bg-slate-100 dark:bg-slate-900/40 border-slate-200/30"
                         }
                       `}
@@ -531,7 +596,7 @@ export default function MultiplayerGamePage() {
                       
                       <div className="text-right">
                         <span className="text-sm font-extrabold text-slate-900 dark:text-white block">
-                          {p.finished ? formatTime(p.solveTimeSeconds) : `${p.completionPercentage}% filled`}
+                          {isPlayerFailed ? "Failed (3 Mistakes)" : p.finished ? formatTime(p.solveTimeSeconds) : `${p.completionPercentage}% filled`}
                         </span>
                         <span className="text-[10px] text-slate-400 block font-bold uppercase">
                           Mistakes: {p.mistakes}
@@ -544,9 +609,21 @@ export default function MultiplayerGamePage() {
 
               {/* Action buttons */}
               <div className="space-y-2">
+                {!isCompleted && !isGameOver && (
+                  <button
+                    onClick={() => {
+                      if (synth) synth.playClick();
+                      setDismissedResults(true);
+                    }}
+                    className="w-full py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold shadow-md shadow-indigo-500/20 active:scale-[0.98] transition-all cursor-pointer text-sm mb-2"
+                  >
+                    Continue Solving
+                  </button>
+                )}
+
                 <button
                   onClick={handleReturnToDashboard}
-                  className="w-full py-3.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold shadow-md shadow-indigo-500/20 active:scale-[0.98] transition-all cursor-pointer"
+                  className="w-full py-3 bg-slate-100 hover:bg-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200/20 rounded-xl font-bold transition-all text-sm cursor-pointer"
                 >
                   Return to Dashboard
                 </button>

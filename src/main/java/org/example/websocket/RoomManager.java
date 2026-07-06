@@ -33,7 +33,7 @@ public class RoomManager {
             throw new IllegalArgumentException("Room not found");
         }
 
-        if (room.getPlayers().size() >= 2 && !room.getPlayers().containsKey(username)) {
+        if (room.getPlayers().size() >= 10 && !room.getPlayers().containsKey(username)) {
             throw new IllegalStateException("Room is full");
         }
 
@@ -44,12 +44,24 @@ public class RoomManager {
         // Add player
         RoomPlayer player = room.getPlayers().computeIfAbsent(username, u -> new RoomPlayer(u, avatarUrl));
         
-        // If two players joined, kickstart countdown
-        if (room.getPlayers().size() == 2 && room.getState().equals("WAITING")) {
-            room.setState("COUNTDOWN");
-            room.setStartTimestamp(System.currentTimeMillis() + 3000); // 3-second countdown
+        // First player to join becomes the host
+        if (room.getHostUsername() == null) {
+            room.setHostUsername(username);
         }
 
+        return room;
+    }
+
+    public Room startCountdown(String roomCode, String hostUsername) {
+        Room room = getRoom(roomCode);
+        if (room == null) return null;
+        if (room.getHostUsername() == null || !room.getHostUsername().equals(hostUsername)) {
+            throw new IllegalArgumentException("Only the host can start the game");
+        }
+        if (room.getState().equals("WAITING")) {
+            room.setState("COUNTDOWN");
+            room.setStartTimestamp(System.currentTimeMillis() + 5000); // 5-second countdown
+        }
         return room;
     }
 
@@ -63,7 +75,14 @@ public class RoomManager {
             player.setMistakes(mistakes);
             int percentage = (int) ((completedCells / 81.0) * 100);
             player.setCompletionPercentage(Math.min(percentage, 100));
+
+            // Mark player as finished (failed) if they reach 3 mistakes
+            if (mistakes >= 3) {
+                player.setFinished(true);
+            }
         }
+
+        checkAllPlayersFinished(room);
         return room;
     }
 
@@ -80,12 +99,49 @@ public class RoomManager {
             player.setCompletedCells(81);
         }
 
-        if (room.getWinnerUsername() == null) {
+        // If player solved it successfully (mistakes < 3) and no winner yet, set them as winner
+        if (room.getWinnerUsername() == null && mistakes < 3) {
             room.setWinnerUsername(username);
             room.setState("FINISHED");
         }
 
+        checkAllPlayersFinished(room);
         return room;
+    }
+
+    private void checkAllPlayersFinished(Room room) {
+        boolean allDone = true;
+        for (RoomPlayer rp : room.getPlayers().values()) {
+            if (!rp.isFinished() && rp.getMistakes() < 3) {
+                allDone = false;
+                break;
+            }
+        }
+
+        if (allDone && room.getState().equals("PLAYING")) {
+            room.setState("FINISHED");
+            
+            // If the game ended but no winner was declared (e.g., everyone failed),
+            // declare the person with the most completed cells (and least mistakes as tie-breaker) who didn't fail
+            if (room.getWinnerUsername() == null) {
+                String bestWinner = null;
+                int maxCompleted = -1;
+                int minMistakes = 999;
+                for (RoomPlayer rp : room.getPlayers().values()) {
+                    if (rp.getMistakes() < 3) {
+                        if (rp.getCompletedCells() > maxCompleted) {
+                            maxCompleted = rp.getCompletedCells();
+                            bestWinner = rp.getUsername();
+                            minMistakes = rp.getMistakes();
+                        } else if (rp.getCompletedCells() == maxCompleted && rp.getMistakes() < minMistakes) {
+                            bestWinner = rp.getUsername();
+                            minMistakes = rp.getMistakes();
+                        }
+                    }
+                }
+                room.setWinnerUsername(bestWinner);
+            }
+        }
     }
 
     public Room removePlayer(String roomCode, String username) {
@@ -100,12 +156,31 @@ public class RoomManager {
             return null;
         }
 
-        // If a player left during gameplay, declare other player as winner
+        // If the host left, assign a new host
+        if (room.getHostUsername() != null && room.getHostUsername().equals(username)) {
+            String newHost = room.getPlayers().keySet().iterator().next();
+            room.setHostUsername(newHost);
+        }
+
+        // If players left during gameplay, check if we need to end the match
         if (room.getState().equals("PLAYING") || room.getState().equals("COUNTDOWN")) {
-            room.setState("FINISHED");
-            // Set the remaining player as winner
-            for (String remainingUser : room.getPlayers().keySet()) {
-                room.setWinnerUsername(remainingUser);
+            int activeCount = 0;
+            String lastActiveUser = null;
+            for (RoomPlayer rp : room.getPlayers().values()) {
+                if (!rp.isFinished() && rp.getMistakes() < 3) {
+                    activeCount++;
+                    lastActiveUser = rp.getUsername();
+                }
+            }
+
+            if (activeCount == 0) {
+                room.setState("FINISHED");
+            } else if (room.getPlayers().size() == 1) {
+                // If only 1 player remains, finish match and make them winner
+                room.setState("FINISHED");
+                if (room.getWinnerUsername() == null) {
+                    room.setWinnerUsername(lastActiveUser);
+                }
             }
         }
 

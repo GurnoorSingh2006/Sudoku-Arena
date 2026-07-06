@@ -33,6 +33,7 @@ public class User {
     private int mediumPuzzlesSolved = 0;
     private int hardPuzzlesSolved = 0;
     private int expertPuzzlesSolved = 0;
+    private int dailyChallengesSolved = 0;
 
     // Constructors
     public User() {}
@@ -87,4 +88,7 @@ public class User {
 
     public int getExpertPuzzlesSolved() { return expertPuzzlesSolved; }
     public void setExpertPuzzlesSolved(int expertPuzzlesSolved) { this.expertPuzzlesSolved = expertPuzzlesSolved; }
+
+    public int getDailyChallengesSolved() { return dailyChallengesSolved; }
+    public void setDailyChallengesSolved(int dailyChallengesSolved) { this.dailyChallengesSolved = dailyChallengesSolved; }
 }

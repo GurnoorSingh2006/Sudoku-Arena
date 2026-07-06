@@ -14,7 +14,9 @@ import {
   ChevronRight,
   Sun,
   Moon,
-  Sparkles
+  Sparkles,
+  Calendar,
+  Check
 } from "lucide-react";
 import { apiFetch, clearAuthToken, getStoredUser, setStoredUser } from "@/utils/api";
 import { synth } from "@/utils/synth";
@@ -29,6 +31,7 @@ export default function DashboardPage() {
   const [joinError, setJoinError] = useState("");
   const [loadingRoom, setLoadingRoom] = useState(false);
   const [theme, setTheme] = useState("light");
+  const [dailyStatus, setDailyStatus] = useState<any>(null);
 
   // Authentication check and data fetch
   useEffect(() => {
@@ -51,6 +54,14 @@ export default function DashboardPage() {
 
         const fastestTimes = await apiFetch("/api/leaderboard/fastest?difficulty=Medium");
         setFastestLeaderboard(fastestTimes);
+
+        // Fetch Daily Challenge status
+        try {
+          const dailyData = await apiFetch("/api/sudoku/daily");
+          setDailyStatus(dailyData);
+        } catch (dailyErr) {
+          console.error("Error fetching daily challenge:", dailyErr);
+        }
       } catch (err) {
         console.error("Error fetching data:", err);
       }
@@ -195,6 +206,9 @@ export default function DashboardPage() {
                   <span className="text-xs px-3 py-1 rounded-lg bg-slate-100 dark:bg-slate-800/60 text-slate-600 dark:text-slate-400">
                     Expert Solved: <strong>{user.expertPuzzlesSolved}</strong>
                   </span>
+                  <span className="text-xs px-3 py-1 rounded-lg bg-slate-100 dark:bg-slate-800/60 text-slate-600 dark:text-slate-400">
+                    Daily Solved: <strong>{user.dailyChallengesSolved || 0}</strong>
+                  </span>
                 </div>
               </div>
             </div>
@@ -225,7 +239,54 @@ export default function DashboardPage() {
           </section>
 
           {/* Setup Play Options */}
-          <div className="grid grid-cols-1 md:grid-cols-2 gap-8">
+          <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            
+            {/* Daily Challenge Card */}
+            <section className="glass-panel rounded-2xl p-6 border border-slate-200/50 dark:border-slate-800/40 flex flex-col justify-between">
+              <div>
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="p-2.5 rounded-xl bg-amber-50 dark:bg-amber-950/50 text-amber-500">
+                    <Calendar className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <h3 className="font-extrabold text-lg">Daily Challenge</h3>
+                    <p className="text-xs text-slate-400">Unique daily puzzle</p>
+                  </div>
+                </div>
+
+                {dailyStatus ? (
+                  <div className="space-y-4 mb-6">
+                    <div className="p-4 bg-slate-100/50 dark:bg-slate-900/30 rounded-xl border border-slate-200/30 text-center">
+                      <span className="text-[10px] text-slate-400 uppercase tracking-wider block font-bold">Today's Date</span>
+                      <span className="text-base font-extrabold text-slate-700 dark:text-slate-200">{dailyStatus.date}</span>
+                      <span className="mt-2 text-xs px-2.5 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-400 font-bold border border-indigo-200/30 inline-block">
+                        Difficulty: {dailyStatus.difficulty}
+                      </span>
+                    </div>
+                  </div>
+                ) : (
+                  <div className="py-8 text-center text-xs text-slate-400">Loading challenge...</div>
+                )}
+              </div>
+
+              {dailyStatus && (
+                dailyStatus.completed ? (
+                  <div className="w-full text-center py-4 bg-emerald-50 dark:bg-emerald-950/30 text-emerald-600 dark:text-emerald-400 border border-emerald-200/30 rounded-xl font-bold text-sm flex items-center justify-center gap-2">
+                    <Check className="w-5 h-5" /> Completed Today!
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => {
+                      if (synth) synth.playSuccess();
+                      router.push("/play/single?difficulty=Daily");
+                    }}
+                    className="w-full flex items-center justify-center gap-2 py-4 bg-gradient-to-r from-amber-500 to-orange-500 text-white rounded-xl font-bold shadow-md shadow-amber-500/20 hover:opacity-95 active:scale-[0.98] transition-all cursor-pointer"
+                  >
+                    <Play className="w-5 h-5 fill-white" /> Play Challenge
+                  </button>
+                )
+              )}
+            </section>
             
             {/* Single Player setup */}
             <section className="glass-panel rounded-2xl p-6 border border-slate-200/50 dark:border-slate-800/40 flex flex-col">
