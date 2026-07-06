@@ -57,7 +57,8 @@ public class SecurityConfig {
                                 "/ws/**",
                                 "/ws",
 
-                                "/h2-console/**"
+                                "/h2-console/**",
+                                "/error"
                         ).permitAll()
 
                         // Everything else needs JWT
