@@ -47,4 +47,19 @@ public class LeaderboardController {
         );
         return ResponseEntity.ok(topSolves);
     }
+
+    /**
+     * Get top solve times specifically for today's Daily Challenge.
+     */
+    @GetMapping("/daily")
+    public ResponseEntity<List<GameHistory>> getDailyLeaderboard(
+            @RequestParam(defaultValue = "15") int limit) {
+        java.time.LocalDate today = java.time.LocalDate.now(java.time.ZoneOffset.UTC);
+        java.time.LocalDateTime startOfToday = today.atStartOfDay();
+        List<GameHistory> dailyLeaderboard = gameHistoryRepository.findDailyLeaderboard(
+                startOfToday,
+                PageRequest.of(0, limit)
+        );
+        return ResponseEntity.ok(dailyLeaderboard);
+    }
 }

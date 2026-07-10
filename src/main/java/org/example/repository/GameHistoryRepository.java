@@ -19,4 +19,10 @@ public interface GameHistoryRepository extends JpaRepository<GameHistory, Long> 
     List<GameHistory> findTopScoresByDifficulty(String difficulty, Pageable pageable);
 
     boolean existsByUserAndDifficultyAndCompletedAtGreaterThanEqual(User user, String difficulty, java.time.LocalDateTime completedAt);
+
+    @Query("SELECT gh FROM GameHistory gh WHERE gh.difficulty = 'Daily' AND gh.win = true AND gh.completedAt >= :startOfToday ORDER BY gh.solveTimeSeconds ASC")
+    List<GameHistory> findDailyLeaderboard(java.time.LocalDateTime startOfToday, org.springframework.data.domain.Pageable pageable);
+
+    @Query("SELECT MIN(gh.solveTimeSeconds) FROM GameHistory gh WHERE gh.user = :user AND LOWER(gh.difficulty) = LOWER(:difficulty) AND gh.win = true")
+    Integer findBestTimeByUserAndDifficulty(User user, String difficulty);
 }

@@ -110,6 +110,40 @@ public class ProfileController {
         return ResponseEntity.ok(dbUser);
     }
 
+    @GetMapping("/stats")
+    public ResponseEntity<?> getStats(@AuthenticationPrincipal User user) {
+        Optional<User> dbUserOpt = userRepository.findById(user.getId());
+        if (dbUserOpt.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+        User dbUser = dbUserOpt.get();
+
+        Integer bestEasy = gameHistoryRepository.findBestTimeByUserAndDifficulty(dbUser, "easy");
+        Integer bestMedium = gameHistoryRepository.findBestTimeByUserAndDifficulty(dbUser, "medium");
+        Integer bestHard = gameHistoryRepository.findBestTimeByUserAndDifficulty(dbUser, "hard");
+        Integer bestExpert = gameHistoryRepository.findBestTimeByUserAndDifficulty(dbUser, "expert");
+        Integer bestDaily = gameHistoryRepository.findBestTimeByUserAndDifficulty(dbUser, "daily");
+
+        java.util.Map<String, Object> stats = new java.util.HashMap<>();
+        stats.put("gamesPlayed", dbUser.getGamesPlayed());
+        stats.put("gamesWon", dbUser.getGamesWon());
+        stats.put("totalSolveTimeSeconds", dbUser.getTotalSolveTimeSeconds());
+        stats.put("fastestSolveTimeSeconds", dbUser.getFastestSolveTimeSeconds());
+        stats.put("easyPuzzlesSolved", dbUser.getEasyPuzzlesSolved());
+        stats.put("mediumPuzzlesSolved", dbUser.getMediumPuzzlesSolved());
+        stats.put("hardPuzzlesSolved", dbUser.getHardPuzzlesSolved());
+        stats.put("expertPuzzlesSolved", dbUser.getExpertPuzzlesSolved());
+        stats.put("dailyChallengesSolved", dbUser.getDailyChallengesSolved());
+        
+        stats.put("bestTimeEasy", bestEasy);
+        stats.put("bestTimeMedium", bestMedium);
+        stats.put("bestTimeHard", bestHard);
+        stats.put("bestTimeExpert", bestExpert);
+        stats.put("bestTimeDaily", bestDaily);
+
+        return ResponseEntity.ok(stats);
+    }
+
     // --- Inner Requests ---
 
     public static class UpdateProfileRequest {

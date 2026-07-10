@@ -10,6 +10,7 @@ import { useSudoku } from "@/hooks/useSudoku";
 import SudokuBoard from "@/components/SudokuBoard";
 import NumberPad from "@/components/NumberPad";
 import GameControls from "@/components/GameControls";
+import RaceTimeline from "@/components/RaceTimeline";
 import { synth } from "@/utils/synth";
 
 interface RoomPlayer {
@@ -43,6 +44,7 @@ export default function MultiplayerGamePage() {
   const [room, setRoom] = useState<Room | null>(null);
   const [copied, setCopied] = useState(false);
   const [countdown, setCountdown] = useState<number | null>(null);
+  const [multiTimeline, setMultiTimeline] = useState<Record<string, { time: number; percentage: number }[]>>({});
   
   const stompClient = useRef<Client | null>(null);
   const isConnected = useRef(false);
@@ -114,6 +116,48 @@ export default function MultiplayerGamePage() {
       }
     };
   }, [roomCode, user]);
+
+  // Update multiTimeline whenever room players progress updates
+  useEffect(() => {
+    if (!room) return;
+
+    if (room.state === "PLAYING") {
+      const initialClues = room.board.flat().filter(cell => cell !== 0).length;
+      const initialPct = Math.round((initialClues / 81) * 100);
+      const elapsed = Math.max(0, Math.floor((Date.now() - room.startTimestamp) / 1000));
+      const elapsedMinutes = Math.round((elapsed / 60) * 10) / 10;
+
+      setMultiTimeline(prev => {
+        const next = { ...prev };
+        Object.values(room.players).forEach(p => {
+          const history = next[p.username] || [{ time: 0, percentage: initialPct }];
+          const last = history[history.length - 1];
+
+          if (p.completionPercentage !== last?.percentage) {
+            next[p.username] = [...history, { time: elapsedMinutes, percentage: p.completionPercentage }];
+          }
+        });
+        return next;
+      });
+    } else if (room.state === "FINISHED") {
+      setMultiTimeline(prev => {
+        const next = { ...prev };
+        Object.values(room.players).forEach(p => {
+          const history = next[p.username] || [];
+          if (history.length > 0) {
+            const last = history[history.length - 1];
+            if (p.finished && last.percentage !== p.completionPercentage) {
+              const timeVal = p.solveTimeSeconds > 0 ? Math.round((p.solveTimeSeconds / 60) * 10) / 10 : last.time;
+              next[p.username] = [...history, { time: timeVal, percentage: p.completionPercentage }];
+            }
+          }
+        });
+        return next;
+      });
+    } else if (room.state === "WAITING" || room.state === "COUNTDOWN") {
+      setMultiTimeline({});
+    }
+  }, [room?.players, room?.state]);
 
   // Handle countdown triggers
   useEffect(() => {
@@ -605,6 +649,11 @@ export default function MultiplayerGamePage() {
                     </div>
                   );
                 })}
+              </div>
+
+              {/* Race Timeline chart */}
+              <div className="w-full mb-6">
+                <RaceTimeline data={multiTimeline} title="Players Solve Race Curve" />
               </div>
 
               {/* Action buttons */}

@@ -3,12 +3,13 @@
 import React, { useState, useEffect, Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
-import { Trophy, Clock, XCircle, Home, RotateCcw, HelpCircle, Eye, ArrowLeft } from "lucide-react";
+import { Trophy, Clock, XCircle, Home, RotateCcw, HelpCircle, ArrowLeft } from "lucide-react";
 import { apiFetch, getStoredUser } from "@/utils/api";
 import { useSudoku } from "@/hooks/useSudoku";
 import SudokuBoard from "@/components/SudokuBoard";
 import NumberPad from "@/components/NumberPad";
 import GameControls from "@/components/GameControls";
+import RaceTimeline from "@/components/RaceTimeline";
 import { synth } from "@/utils/synth";
 
 function SinglePlayerGameContent() {
@@ -27,6 +28,7 @@ function SinglePlayerGameContent() {
   const [resultMistakes, setResultMistakes] = useState(0);
   const [resultHints, setResultHints] = useState(0);
   const [resultScore, setResultScore] = useState(0);
+  const [timelineData, setTimelineData] = useState<{ time: number; percentage: number }[]>([]);
 
   useEffect(() => {
     const storedUser = getStoredUser();
@@ -48,6 +50,10 @@ function SinglePlayerGameContent() {
         }
         setInitialBoard(data.board);
         setSolutionBoard(data.solution);
+
+        const initialClues = data.board.flat().filter((cell: number) => cell !== 0).length;
+        const initialPct = Math.round((initialClues / 81) * 100);
+        setTimelineData([{ time: 0, percentage: initialPct }]);
       } catch (err) {
         console.error("Failed to load puzzle:", err);
         alert("Failed to load puzzle. Please verify the backend is running.");
@@ -58,6 +64,19 @@ function SinglePlayerGameContent() {
 
     fetchPuzzle();
   }, [difficulty, router]);
+
+  // Record timeline snapshots every minute
+  useEffect(() => {
+    if (timerSeconds > 0 && timerSeconds % 60 === 0 && !isPaused && !isCompleted && !isGameOver && board.length > 0) {
+      const minutes = timerSeconds / 60;
+      const filledCells = board.flat().filter(cell => cell !== 0).length;
+      const currentPct = Math.round((filledCells / 81) * 100);
+      setTimelineData(prev => {
+        if (prev.some(entry => entry.time === minutes)) return prev;
+        return [...prev, { time: minutes, percentage: currentPct }];
+      });
+    }
+  }, [timerSeconds, board, isPaused, isCompleted, isGameOver]);
 
   // Hook into gameplay state
   const {
@@ -80,7 +99,6 @@ function SinglePlayerGameContent() {
     redo,
     toggleNoteMode,
     giveHint,
-    autoSolve,
     resetPuzzle,
     togglePause,
     numberCounts,
@@ -90,7 +108,6 @@ function SinglePlayerGameContent() {
     initialBoard,
     solutionBoard,
     difficulty,
-    undefined, // progress updates not required for single player
     async (finalTime, finalMistakes, finalHints) => {
       // Game solved callback
       const score = Math.max(0, 1000 + (1200 - finalTime) - (finalMistakes * 100));
@@ -99,6 +116,12 @@ function SinglePlayerGameContent() {
       setResultHints(finalHints);
       setResultScore(score);
       setShowResults(true);
+
+      const finalMinutes = Math.round((finalTime / 60) * 10) / 10;
+      setTimelineData(prev => {
+        const filtered = prev.filter(entry => entry.time < finalMinutes);
+        return [...filtered, { time: finalMinutes, percentage: 100 }];
+      });
 
       // Save match record in database via profile REST endpoint
       try {
@@ -118,6 +141,15 @@ function SinglePlayerGameContent() {
       }
     }
   );
+
+  const handleResetPuzzle = () => {
+    resetPuzzle();
+    if (initialBoard.length > 0) {
+      const initialClues = initialBoard.flat().filter(cell => cell !== 0).length;
+      const initialPct = Math.round((initialClues / 81) * 100);
+      setTimelineData([{ time: 0, percentage: initialPct }]);
+    }
+  };
 
   const handleReturnToDashboard = () => {
     if (synth) synth.playClick();
@@ -231,7 +263,7 @@ function SinglePlayerGameContent() {
         />
 
         {/* Bottom Game Management Buttons */}
-        <div className="flex gap-2 w-full max-w-[460px] mx-auto mt-6 px-1">
+        <div className="flex gap-3 w-full max-w-[460px] mx-auto mt-6 px-1">
           <button
             onClick={togglePause}
             className="flex-1 flex items-center justify-center gap-1.5 py-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-700 dark:text-slate-300 font-bold transition-all text-xs cursor-pointer"
@@ -240,18 +272,11 @@ function SinglePlayerGameContent() {
           </button>
           
           <button
-            onClick={resetPuzzle}
-            className="flex items-center justify-center p-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-500 hover:text-rose-500 transition-all cursor-pointer"
+            onClick={handleResetPuzzle}
+            className="flex-1 flex items-center justify-center gap-1.5 py-3 rounded-xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900 text-slate-500 hover:text-rose-500 transition-all text-xs font-bold cursor-pointer"
             title="Reset Board"
           >
-            <RotateCcw className="w-4 h-4" />
-          </button>
-
-          <button
-            onClick={autoSolve}
-            className="flex-1 flex items-center justify-center gap-1.5 py-3 bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 text-white dark:text-slate-900 rounded-xl font-bold transition-all text-xs cursor-pointer"
-          >
-            <Eye className="w-4 h-4" /> Solve Automatically
+            <RotateCcw className="w-4 h-4" /> Reset Board
           </button>
         </div>
       </main>
@@ -279,7 +304,7 @@ function SinglePlayerGameContent() {
                 <button
                   onClick={() => {
                     if (synth) synth.playClick();
-                    resetPuzzle();
+                    handleResetPuzzle();
                   }}
                   className="w-full py-3.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-bold shadow-md shadow-rose-500/20 active:scale-[0.98] transition-all cursor-pointer"
                 >
@@ -306,7 +331,7 @@ function SinglePlayerGameContent() {
               initial={{ scale: 0.9, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.9, opacity: 0 }}
-              className="glass-panel max-w-sm w-full rounded-2xl p-6 border border-slate-200/50 dark:border-slate-800/40 text-center shadow-2xl"
+              className="glass-panel max-w-md w-full rounded-2xl p-6 border border-slate-200/50 dark:border-slate-800/40 text-center shadow-2xl"
             >
               <div className="w-16 h-16 rounded-full bg-emerald-100 dark:bg-emerald-950/50 text-emerald-600 dark:text-emerald-400 flex items-center justify-center mx-auto mb-4 border border-emerald-200/20">
                 <Trophy className="w-8 h-8" />
@@ -353,6 +378,11 @@ function SinglePlayerGameContent() {
                     +{resultScore} pts
                   </span>
                 </div>
+              </div>
+
+              {/* Race Timeline chart */}
+              <div className="w-full mb-6">
+                <RaceTimeline data={{ "You": timelineData }} title="Your Solve Curve" />
               </div>
 
               {/* Action options */}

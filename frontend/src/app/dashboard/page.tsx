@@ -26,6 +26,8 @@ export default function DashboardPage() {
   const [user, setUser] = useState<any>(null);
   const [leaderboard, setLeaderboard] = useState<any[]>([]);
   const [fastestLeaderboard, setFastestLeaderboard] = useState<any[]>([]);
+  const [dailyLeaderboard, setDailyLeaderboard] = useState<any[]>([]);
+  const [leaderboardTab, setLeaderboardTab] = useState<"global" | "fastest" | "daily">("global");
   const [selectedDifficulty, setSelectedDifficulty] = useState("Medium");
   const [roomCodeToJoin, setRoomCodeToJoin] = useState("");
   const [joinError, setJoinError] = useState("");
@@ -54,6 +56,14 @@ export default function DashboardPage() {
 
         const fastestTimes = await apiFetch("/api/leaderboard/fastest?difficulty=Medium");
         setFastestLeaderboard(fastestTimes);
+
+        // Fetch Daily challenge leaderboard
+        try {
+          const dailyL = await apiFetch("/api/leaderboard/daily");
+          setDailyLeaderboard(dailyL);
+        } catch (err) {
+          console.error("Failed to load daily leaderboard:", err);
+        }
 
         // Fetch Daily Challenge status
         try {
@@ -137,7 +147,11 @@ export default function DashboardPage() {
   if (!user) return null;
 
   const winRate = user.gamesPlayed > 0 ? Math.round((user.gamesWon / user.gamesPlayed) * 100) : 0;
-  const avgSolveTime = user.gamesWon > 0 ? Math.round(user.totalSolveTimeSeconds / user.gamesWon) : null;
+  const formatSolveTime = (secs: number) => {
+    const m = Math.floor(secs / 60);
+    const s = secs % 60;
+    return `${m}m ${s}s`;
+  };
 
   return (
     <div className="min-h-screen bg-slate-50 dark:bg-[#080d1a] py-8 px-4 sm:px-6 lg:px-8 relative overflow-hidden transition-all duration-300">
@@ -177,64 +191,32 @@ export default function DashboardPage() {
         {/* LEFT COLUMN: Profile Stats & Game Select */}
         <div className="lg:col-span-2 space-y-8">
           
-          {/* Profile Overview Card */}
-          <section className="glass-panel rounded-2xl p-6 border border-slate-200/50 dark:border-slate-800/40">
-            <div className="flex flex-col sm:flex-row items-center gap-6">
-              <img
-                src={user.avatarUrl || `https://api.dicebear.com/7.x/bottts/svg?seed=${user.username}`}
-                alt="Avatar"
-                className="w-20 h-20 rounded-2xl bg-indigo-50 dark:bg-indigo-950/30 border-2 border-indigo-500/20 p-1 object-contain"
-              />
-              <div className="text-center sm:text-left flex-1">
-                <h2 className="text-2xl font-extrabold text-slate-900 dark:text-white flex items-center justify-center sm:justify-start gap-2">
-                  {user.username}
-                  <span className="text-xs px-2.5 py-0.5 rounded-full bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-400 font-bold border border-indigo-200/30">
-                    Pro Player
-                  </span>
-                </h2>
-                <p className="text-slate-400 text-sm mt-0.5">{user.email}</p>
-                <div className="mt-4 flex flex-wrap gap-2 justify-center sm:justify-start">
-                  <span className="text-xs px-3 py-1 rounded-lg bg-slate-100 dark:bg-slate-800/60 text-slate-600 dark:text-slate-400">
-                    Easy Solved: <strong>{user.easyPuzzlesSolved}</strong>
-                  </span>
-                  <span className="text-xs px-3 py-1 rounded-lg bg-slate-100 dark:bg-slate-800/60 text-slate-600 dark:text-slate-400">
-                    Medium Solved: <strong>{user.mediumPuzzlesSolved}</strong>
-                  </span>
-                  <span className="text-xs px-3 py-1 rounded-lg bg-slate-100 dark:bg-slate-800/60 text-slate-600 dark:text-slate-400">
-                    Hard Solved: <strong>{user.hardPuzzlesSolved}</strong>
-                  </span>
-                  <span className="text-xs px-3 py-1 rounded-lg bg-slate-100 dark:bg-slate-800/60 text-slate-600 dark:text-slate-400">
-                    Expert Solved: <strong>{user.expertPuzzlesSolved}</strong>
-                  </span>
-                  <span className="text-xs px-3 py-1 rounded-lg bg-slate-100 dark:bg-slate-800/60 text-slate-600 dark:text-slate-400">
-                    Daily Solved: <strong>{user.dailyChallengesSolved || 0}</strong>
-                  </span>
+          {/* Greeting & Quick Navigation Card */}
+          <section className="glass-panel rounded-2xl p-6 border border-slate-200/50 dark:border-slate-800/40 bg-gradient-to-br from-indigo-500/5 to-purple-500/5">
+            <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
+              <div className="flex items-center gap-4 text-center sm:text-left flex-col sm:flex-row">
+                <img
+                  src={user.avatarUrl || `https://api.dicebear.com/7.x/bottts/svg?seed=${user.username}`}
+                  alt="Avatar"
+                  className="w-14 h-14 rounded-2xl bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-200/20 p-1 object-contain"
+                />
+                <div>
+                  <h2 className="text-xl font-black text-slate-800 dark:text-white">
+                    Welcome back, {user.username}! 👋
+                  </h2>
+                  <p className="text-xs text-slate-400 mt-1">Ready for another challenge? Compare your solved times and metrics.</p>
                 </div>
               </div>
-            </div>
 
-            {/* Statistics Mini Cards */}
-            <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mt-8 pt-6 border-t border-slate-200/50 dark:border-slate-800/40">
-              <div className="bg-white/40 dark:bg-slate-900/20 border border-slate-200/30 p-4 rounded-xl text-center">
-                <Play className="w-5 h-5 text-indigo-500 mx-auto mb-1" />
-                <span className="text-xs text-slate-400 uppercase tracking-wider block font-bold">Played</span>
-                <span className="text-2xl font-extrabold">{user.gamesPlayed}</span>
-              </div>
-              <div className="bg-white/40 dark:bg-slate-900/20 border border-slate-200/30 p-4 rounded-xl text-center">
-                <Trophy className="w-5 h-5 text-emerald-500 mx-auto mb-1" />
-                <span className="text-xs text-slate-400 uppercase tracking-wider block font-bold">Won</span>
-                <span className="text-2xl font-extrabold">{user.gamesWon}</span>
-              </div>
-              <div className="bg-white/40 dark:bg-slate-900/20 border border-slate-200/30 p-4 rounded-xl text-center">
-                <Zap className="w-5 h-5 text-amber-500 mx-auto mb-1" />
-                <span className="text-xs text-slate-400 uppercase tracking-wider block font-bold">Win Rate</span>
-                <span className="text-2xl font-extrabold">{winRate}%</span>
-              </div>
-              <div className="bg-white/40 dark:bg-slate-900/20 border border-slate-200/30 p-4 rounded-xl text-center">
-                <Clock className="w-5 h-5 text-sky-500 mx-auto mb-1" />
-                <span className="text-xs text-slate-400 uppercase tracking-wider block font-bold">Fastest</span>
-                <span className="text-2xl font-extrabold">{formatTime(user.fastestSolveTimeSeconds)}</span>
-              </div>
+              <button
+                onClick={() => {
+                  if (synth) synth.playClick();
+                  router.push("/profile");
+                }}
+                className="px-5 py-2.5 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-800 rounded-xl font-bold transition-all text-xs flex items-center gap-1.5 shadow-sm active:scale-95 cursor-pointer"
+              >
+                <UserIcon className="w-4 h-4 text-indigo-500" /> View Profile & Stats
+              </button>
             </div>
           </section>
 
@@ -401,71 +383,123 @@ export default function DashboardPage() {
           </div>
         </div>
 
-        {/* RIGHT COLUMN: Global Leaderboard */}
+        {/* RIGHT COLUMN: Tabbed Leaderboards */}
         <div>
           <section className="glass-panel rounded-2xl p-6 border border-slate-200/50 dark:border-slate-800/40 h-full flex flex-col">
-            <div className="flex items-center gap-3 mb-6">
+            <div className="flex items-center gap-3 mb-4">
               <div className="p-2.5 rounded-xl bg-amber-50 dark:bg-amber-950/50 text-amber-500">
                 <Trophy className="w-6 h-6" />
               </div>
               <div>
-                <h3 className="font-extrabold text-lg">Top Players</h3>
-                <p className="text-xs text-slate-400">Global rankings by total wins</p>
+                <h3 className="font-extrabold text-lg">Arena Rankings</h3>
+                <p className="text-xs text-slate-400">Compare with other players</p>
               </div>
             </div>
 
+            {/* Leaderboard Tabs */}
+            <div className="flex border-b border-slate-200/60 dark:border-slate-800/40 mb-4 text-xs font-bold">
+              <button
+                onClick={() => { if (synth) synth.playClick(); setLeaderboardTab("global"); }}
+                className={`flex-1 pb-3 text-center transition-colors cursor-pointer ${leaderboardTab === "global" ? "border-b-2 border-indigo-500 text-indigo-600 dark:text-indigo-400 font-extrabold" : "text-slate-400 hover:text-slate-600"}`}
+              >
+                Global Wins
+              </button>
+              <button
+                onClick={() => { if (synth) synth.playClick(); setLeaderboardTab("fastest"); }}
+                className={`flex-1 pb-3 text-center transition-colors cursor-pointer ${leaderboardTab === "fastest" ? "border-b-2 border-indigo-500 text-indigo-600 dark:text-indigo-400 font-extrabold" : "text-slate-400 hover:text-slate-600"}`}
+              >
+                Fastest (Med)
+              </button>
+              <button
+                onClick={() => { if (synth) synth.playClick(); setLeaderboardTab("daily"); }}
+                className={`flex-1 pb-3 text-center transition-colors cursor-pointer ${leaderboardTab === "daily" ? "border-b-2 border-indigo-500 text-indigo-600 dark:text-indigo-400 font-extrabold" : "text-slate-400 hover:text-slate-600"}`}
+              >
+                Daily Challenge
+              </button>
+            </div>
+
+            {/* Leaderboard Entries List */}
             <div className="space-y-3 overflow-y-auto max-h-[460px] pr-1 flex-1">
-              {leaderboard.length === 0 ? (
-                <div className="py-8 text-center text-slate-400 text-sm">
-                  No records found. Solve a puzzle to begin!
-                </div>
-              ) : (
-                leaderboard.map((player, idx) => {
-                  const isSelf = player.username === user.username;
+              {(() => {
+                const getList = () => {
+                  switch (leaderboardTab) {
+                    case "global":
+                      return leaderboard.map((player, idx) => ({
+                        id: player.id,
+                        username: player.username,
+                        avatarUrl: player.avatarUrl,
+                        value: `${player.gamesWon} wins`,
+                        isSelf: player.username === user.username
+                      }));
+                    case "fastest":
+                      return fastestLeaderboard.map((history, idx) => ({
+                        id: history.id,
+                        username: history.user?.username || "Unknown",
+                        avatarUrl: history.user?.avatarUrl,
+                        value: formatSolveTime(history.solveTimeSeconds),
+                        isSelf: history.user?.username === user.username
+                      }));
+                    case "daily":
+                      return dailyLeaderboard.map((history, idx) => ({
+                        id: history.id,
+                        username: history.user?.username || "Unknown",
+                        avatarUrl: history.user?.avatarUrl,
+                        value: formatSolveTime(history.solveTimeSeconds),
+                        isSelf: history.user?.username === user.username
+                      }));
+                  }
+                };
+
+                const currentList = getList() || [];
+
+                if (currentList.length === 0) {
                   return (
-                    <div
-                      key={player.id}
-                      className={`
-                        flex items-center justify-between p-3 rounded-xl border transition-all duration-200
-                        ${
-                          isSelf
-                            ? "bg-indigo-50/50 dark:bg-indigo-950/20 border-indigo-500/30"
-                            : "bg-white/40 dark:bg-slate-900/10 border-slate-100 dark:border-slate-900/50"
-                        }
-                      `}
-                    >
-                      <div className="flex items-center gap-3">
-                        <span className="text-sm font-bold text-slate-400 w-5 text-center">
-                          {idx + 1}
-                        </span>
-                        <img
-                          src={player.avatarUrl || `https://api.dicebear.com/7.x/bottts/svg?seed=${player.username}`}
-                          alt="Avatar"
-                          className="w-9 h-9 rounded-lg bg-slate-100 dark:bg-slate-800 object-contain p-0.5"
-                        />
-                        <span className={`text-sm font-bold ${isSelf ? "text-indigo-600 dark:text-indigo-400" : "text-slate-700 dark:text-slate-300"}`}>
-                          {player.username}
-                        </span>
-                      </div>
-                      
-                      <div className="text-right">
-                        <span className="text-sm font-extrabold text-slate-900 dark:text-white block">
-                          {player.gamesWon}
-                        </span>
-                        <span className="text-[10px] text-slate-400 block font-bold uppercase tracking-wider">
-                          Wins
-                        </span>
-                      </div>
+                    <div className="py-8 text-center text-slate-400 text-xs font-semibold">
+                      No records found. Be the first to rank!
                     </div>
                   );
-                })
-              )}
+                }
+
+                return currentList.map((player, idx) => (
+                  <div
+                    key={player.id || idx}
+                    className={`
+                      flex items-center justify-between p-3 rounded-xl border transition-all duration-200
+                      ${
+                        player.isSelf
+                          ? "bg-indigo-50/50 dark:bg-indigo-950/20 border-indigo-500/30"
+                          : "bg-white/40 dark:bg-slate-900/10 border-slate-100 dark:border-slate-900/50"
+                      }
+                    `}
+                  >
+                    <div className="flex items-center gap-3">
+                      <span className="text-xs font-black text-slate-400 w-5 text-center">
+                        {idx + 1}
+                      </span>
+                      <img
+                        src={player.avatarUrl || `https://api.dicebear.com/7.x/bottts/svg?seed=${player.username}`}
+                        alt="Avatar"
+                        className="w-9 h-9 rounded-lg bg-slate-100 dark:bg-slate-800 object-contain p-0.5 border border-slate-200/15"
+                      />
+                      <span className={`text-sm font-bold ${player.isSelf ? "text-indigo-600 dark:text-indigo-400" : "text-slate-700 dark:text-slate-300"}`}>
+                        {player.username}
+                      </span>
+                    </div>
+                    
+                    <div className="text-right">
+                      <span className="text-sm font-extrabold text-slate-900 dark:text-white block">
+                        {player.value}
+                      </span>
+                    </div>
+                  </div>
+                ));
+              })()}
             </div>
             
             {/* Display user's personal placement hint */}
             <div className="mt-6 pt-4 border-t border-slate-200/50 dark:border-slate-800/40 text-center">
-              <span className="text-xs text-slate-400">
-                Play matches to increase your ranking!
+              <span className="text-xs text-slate-400 font-semibold">
+                Rankings refresh in real-time
               </span>
             </div>
           </section>
