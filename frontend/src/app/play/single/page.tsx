@@ -65,19 +65,6 @@ function SinglePlayerGameContent() {
     fetchPuzzle();
   }, [difficulty, router]);
 
-  // Record timeline snapshots every minute
-  useEffect(() => {
-    if (timerSeconds > 0 && timerSeconds % 60 === 0 && !isPaused && !isCompleted && !isGameOver && board.length > 0) {
-      const minutes = timerSeconds / 60;
-      const filledCells = board.flat().filter(cell => cell !== 0).length;
-      const currentPct = Math.round((filledCells / 81) * 100);
-      setTimelineData(prev => {
-        if (prev.some(entry => entry.time === minutes)) return prev;
-        return [...prev, { time: minutes, percentage: currentPct }];
-      });
-    }
-  }, [timerSeconds, board, isPaused, isCompleted, isGameOver]);
-
   // Hook into gameplay state
   const {
     board,
@@ -108,6 +95,7 @@ function SinglePlayerGameContent() {
     initialBoard,
     solutionBoard,
     difficulty,
+    undefined,
     async (finalTime, finalMistakes, finalHints) => {
       // Game solved callback
       const score = Math.max(0, 1000 + (1200 - finalTime) - (finalMistakes * 100));
@@ -141,6 +129,19 @@ function SinglePlayerGameContent() {
       }
     }
   );
+
+  // Record timeline snapshots every minute
+  useEffect(() => {
+    if (timerSeconds > 0 && timerSeconds % 60 === 0 && !isPaused && !isCompleted && !isGameOver && board.length > 0) {
+      const minutes = timerSeconds / 60;
+      const filledCells = board.flat().filter(cell => cell !== 0).length;
+      const currentPct = Math.round((filledCells / 81) * 100);
+      setTimelineData(prev => {
+        if (prev.some(entry => entry.time === minutes)) return prev;
+        return [...prev, { time: minutes, percentage: currentPct }];
+      });
+    }
+  }, [timerSeconds, board, isPaused, isCompleted, isGameOver]);
 
   const handleResetPuzzle = () => {
     resetPuzzle();
