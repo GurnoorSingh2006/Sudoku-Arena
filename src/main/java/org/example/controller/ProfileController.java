@@ -94,6 +94,55 @@ public class ProfileController {
             }
         }
 
+        dbUser.setLastActiveAt(java.time.LocalDateTime.now());
+
+        // -------------------------
+        // Avatar Achievements Checker
+        // -------------------------
+        java.util.Set<String> unlocked = dbUser.getUnlockedAvatars();
+        int totalWins = dbUser.getGamesWon();
+        
+        // Chess categories
+        if (totalWins >= 5) unlocked.add("chess_queen");
+        if (totalWins >= 10) unlocked.add("chess_rook");
+        if (totalWins >= 15) unlocked.add("chess_knight");
+
+        // Animal categories
+        if (totalWins >= 2) unlocked.add("animal_dog");
+        if (totalWins >= 8) unlocked.add("animal_fox");
+        if (totalWins >= 12) unlocked.add("animal_panda");
+        if (totalWins >= 20) unlocked.add("animal_dragon");
+
+        // Fantasy & Special categories
+        if (request.isWin()) {
+            String diff = request.getDifficulty().toLowerCase();
+            if (diff.contains("medium")) unlocked.add("fantasy_elf");
+            if (diff.contains("hard")) unlocked.add("fantasy_warrior");
+            if (diff.contains("expert")) unlocked.add("fantasy_wizard");
+            if (diff.contains("daily")) unlocked.add("fantasy_phoenix");
+
+            if (request.getSolveTimeSeconds() < 300) unlocked.add("special_expert");
+            if (totalWins >= 30) unlocked.add("special_champion");
+
+            // Solve under 5m Expert with no hints
+            if (diff.contains("expert") && request.getSolveTimeSeconds() < 300 && request.getHintsUsed() == 0) {
+                unlocked.add("special_flawless_expert");
+            }
+        }
+
+        // Complete 50 games
+        if (dbUser.getGamesPlayed() >= 50) {
+            unlocked.add("special_veteran");
+        }
+
+        // Apex Challenger (3 multiplayer wins)
+        try {
+            long multiWins = gameHistoryRepository.countByUserAndDifficultyAndWin(dbUser, "Multiplayer", true);
+            if (multiWins >= 3) {
+                unlocked.add("special_challenger");
+            }
+        } catch (Exception ignored) {}
+
         userRepository.save(dbUser);
 
         GameHistory history = new GameHistory(
@@ -108,6 +157,18 @@ public class ProfileController {
 
         gameHistoryRepository.save(history);
         return ResponseEntity.ok(dbUser);
+    }
+
+    @PostMapping("/ping")
+    public ResponseEntity<?> ping(@AuthenticationPrincipal User user) {
+        Optional<User> dbUserOpt = userRepository.findById(user.getId());
+        if (dbUserOpt.isEmpty()) {
+            return ResponseEntity.notFound().build();
+        }
+        User dbUser = dbUserOpt.get();
+        dbUser.setLastActiveAt(java.time.LocalDateTime.now());
+        userRepository.save(dbUser);
+        return ResponseEntity.ok().build();
     }
 
     @GetMapping("/stats")

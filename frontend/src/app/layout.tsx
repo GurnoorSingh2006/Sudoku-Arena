@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { Outfit } from "next/font/google";
 import "./globals.css";
+import NotificationsHandler from "@/components/NotificationsHandler";
 
 const outfit = Outfit({
   variable: "--font-sans",
@@ -25,6 +26,7 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col bg-slate-50 text-slate-900 dark:bg-slate-950 dark:text-slate-100">
         {children}
+        <NotificationsHandler />
       </body>
     </html>
   );

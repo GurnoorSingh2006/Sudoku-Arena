@@ -132,6 +132,34 @@ public class RoomController {
         }
     }
 
+    @org.springframework.web.bind.annotation.GetMapping("/api/rooms/active")
+    @ResponseBody
+    public ResponseEntity<java.util.Collection<Room>> getActiveRooms() {
+        return ResponseEntity.ok(roomManager.getActiveRooms());
+    }
+
+    @MessageMapping("/room/spectate/join")
+    public void joinSpectator(SpectatePayload payload) {
+        Room room = roomManager.addSpectator(payload.getRoomCode(), payload.getUsername());
+        broadcastRoomState(room);
+    }
+
+    @MessageMapping("/room/spectate/leave")
+    public void leaveSpectator(SpectatePayload payload) {
+        Room room = roomManager.removeSpectator(payload.getRoomCode(), payload.getUsername());
+        if (room != null) {
+            broadcastRoomState(room);
+        }
+    }
+
+    @MessageMapping("/friends/challenge")
+    public void challengeFriend(ChallengePayload payload) {
+        messagingTemplate.convertAndSend(
+            "/topic/user/" + payload.getRecipientUsername() + "/notifications",
+            payload
+        );
+    }
+
     private void broadcastRoomState(Room room) {
         if (room != null) {
             messagingTemplate.convertAndSend("/topic/room/" + room.getRoomCode().toUpperCase(), room);
@@ -274,5 +302,31 @@ public class RoomController {
         public void setRoomCode(String roomCode) { this.roomCode = roomCode; }
         public String getUsername() { return username; }
         public void setUsername(String username) { this.username = username; }
+    }
+
+    public static class SpectatePayload {
+        private String roomCode;
+        private String username;
+
+        public String getRoomCode() { return roomCode; }
+        public void setRoomCode(String roomCode) { this.roomCode = roomCode; }
+        public String getUsername() { return username; }
+        public void setUsername(String username) { this.username = username; }
+    }
+
+    public static class ChallengePayload {
+        private String senderUsername;
+        private String recipientUsername;
+        private String roomCode;
+        private String difficulty;
+
+        public String getSenderUsername() { return senderUsername; }
+        public void setSenderUsername(String senderUsername) { this.senderUsername = senderUsername; }
+        public String getRecipientUsername() { return recipientUsername; }
+        public void setRecipientUsername(String recipientUsername) { this.recipientUsername = recipientUsername; }
+        public String getRoomCode() { return roomCode; }
+        public void setRoomCode(String roomCode) { this.roomCode = roomCode; }
+        public String getDifficulty() { return difficulty; }
+        public void setDifficulty(String difficulty) { this.difficulty = difficulty; }
     }
 }

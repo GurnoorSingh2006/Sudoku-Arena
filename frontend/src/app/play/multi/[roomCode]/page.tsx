@@ -1,10 +1,10 @@
 "use client";
 
 import React, { useState, useEffect, useRef } from "react";
-import { useParams, useRouter } from "next/navigation";
+import { useParams, useRouter, useSearchParams } from "next/navigation";
 import { motion, AnimatePresence } from "framer-motion";
 import { Client } from "@stomp/stompjs";
-import { Trophy, Clock, XCircle, Home, Users, Copy, Check, ArrowLeft, Swords } from "lucide-react";
+import { Trophy, Clock, XCircle, Home, Users, Copy, Check, ArrowLeft, Swords, Eye } from "lucide-react";
 import { getStoredUser } from "@/utils/api";
 import { useSudoku } from "@/hooks/useSudoku";
 import SudokuBoard from "@/components/SudokuBoard";
@@ -33,12 +33,15 @@ interface Room {
   winnerUsername: string | null;
   startTimestamp: number;
   hostUsername: string;
+  spectators?: string[];
 }
 
 export default function MultiplayerGamePage() {
   const params = useParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const roomCode = (params.roomCode as string).toUpperCase();
+  const isSpectator = searchParams.get("spectate") === "true";
 
   const [user, setUser] = useState<any>(null);
   const [room, setRoom] = useState<Room | null>(null);
@@ -82,15 +85,25 @@ export default function MultiplayerGamePage() {
         setRoom(updatedRoom);
       });
 
-      // Join room payload broadcast
-      client.publish({
-        destination: "/app/room/join",
-        body: JSON.stringify({
-          roomCode,
-          username: user.username,
-          avatarUrl: user.avatarUrl,
-        }),
-      });
+      // Join room or spectate payload broadcast
+      if (isSpectator) {
+        client.publish({
+          destination: "/app/room/spectate/join",
+          body: JSON.stringify({
+            roomCode,
+            username: user.username,
+          }),
+        });
+      } else {
+        client.publish({
+          destination: "/app/room/join",
+          body: JSON.stringify({
+            roomCode,
+            username: user.username,
+            avatarUrl: user.avatarUrl,
+          }),
+        });
+      }
     };
 
     client.onDisconnect = () => {
@@ -107,11 +120,18 @@ export default function MultiplayerGamePage() {
     // Clean up connections on exit
     return () => {
       if (client.active) {
-        // Report exit to opponent
-        client.publish({
-          destination: "/app/room/leave",
-          body: JSON.stringify({ roomCode, username: user.username }),
-        });
+        if (isSpectator) {
+          client.publish({
+            destination: "/app/room/spectate/leave",
+            body: JSON.stringify({ roomCode, username: user.username }),
+          });
+        } else {
+          // Report exit to opponent
+          client.publish({
+            destination: "/app/room/leave",
+            body: JSON.stringify({ roomCode, username: user.username }),
+          });
+        }
         client.deactivate();
       }
     };
@@ -219,6 +239,7 @@ export default function MultiplayerGamePage() {
     difficulty,
     // On cell progress: publish updates via WebSocket
     (completed, mistakes) => {
+      if (isSpectator) return;
       if (stompClient.current && room?.state === "PLAYING") {
         stompClient.current.publish({
           destination: "/app/room/progress",
@@ -233,6 +254,7 @@ export default function MultiplayerGamePage() {
     },
     // On complete: publish finished trigger
     (time, mistakes) => {
+      if (isSpectator) return;
       if (stompClient.current && room?.state === "PLAYING") {
         stompClient.current.publish({
           destination: "/app/room/finish",
@@ -460,17 +482,30 @@ export default function MultiplayerGamePage() {
           onClick={handleReturnToDashboard}
           className="flex items-center gap-1.5 text-sm font-bold text-slate-500 dark:text-slate-400 hover:text-rose-500 cursor-pointer"
         >
-          <ArrowLeft className="w-4 h-4" /> Leave Match
+          <ArrowLeft className="w-4 h-4" /> {isSpectator ? "Leave Spectator" : "Leave Match"}
         </button>
 
-        <span className="text-xs px-2.5 py-1 rounded-lg bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-400 font-extrabold border border-indigo-100/20">
-          Difficulty: {room.difficulty}
-        </span>
+        {isSpectator ? (
+          <div className="flex items-center gap-1 px-2.5 py-1 rounded-lg bg-rose-500/10 text-rose-500 border border-rose-500/20 font-black animate-pulse text-[10px] uppercase">
+            <span className="w-1.5 h-1.5 rounded-full bg-rose-500" /> Live
+          </div>
+        ) : (
+          <span className="text-xs px-2.5 py-1 rounded-lg bg-indigo-50 dark:bg-indigo-950/40 text-indigo-700 dark:text-indigo-400 font-extrabold border border-indigo-100/20">
+            Difficulty: {room.difficulty}
+          </span>
+        )}
       </header>
 
       {/* Real-time Multiplayer Progress Panels */}
       <section className="max-w-[460px] w-full mx-auto p-4 mb-4 rounded-2xl glass-panel border border-slate-200/50 dark:border-slate-800/40 text-xs">
-        <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-3">Live Scoreboard</h4>
+        <h4 className="text-[10px] font-bold text-slate-400 uppercase tracking-wider mb-3 flex items-center justify-between">
+          <span>Live Scoreboard</span>
+          {room.spectators && room.spectators.length > 0 && (
+            <span className="text-[9px] text-indigo-500 dark:text-indigo-400 normal-case font-black">
+              👁️ {room.spectators.length} watching
+            </span>
+          )}
+        </h4>
         <div className="grid grid-cols-2 gap-3 max-h-[120px] overflow-y-auto pr-1">
           {players.map((p) => {
             const isMe = p.username === user.username;
@@ -546,37 +581,45 @@ export default function MultiplayerGamePage() {
           notes={notes}
           initialBoard={initialGrid}
           solutionBoard={solutionGrid}
-          selectedCell={selectedCell}
+          selectedCell={isSpectator ? null : selectedCell}
           selectedNumber={selectedNumber}
-          onSelectCell={selectCell}
-          onEnterNumber={enterNumber}
-          onClearCell={clearCell}
+          onSelectCell={isSpectator ? () => {} : selectCell}
+          onEnterNumber={isSpectator ? () => {} : enterNumber}
+          onClearCell={isSpectator ? () => {} : clearCell}
           isPaused={false} // Disable pause in multiplayer
           isCompleted={isCompleted}
         />
 
-        {/* Action Controls */}
-        <GameControls
-          noteMode={noteMode}
-          hasUndo={hasUndo}
-          hasRedo={hasRedo}
-          onUndo={undo}
-          onRedo={redo}
-          onClear={clearCell}
-          onToggleNoteMode={toggleNoteMode}
-          onHint={() => {}} // Disable hints in multiplayer for fairness
-          isPaused={false}
-          isCompleted={isCompleted}
-        />
+        {!isSpectator ? (
+          <>
+            {/* Action Controls */}
+            <GameControls
+              noteMode={noteMode}
+              hasUndo={hasUndo}
+              hasRedo={hasRedo}
+              onUndo={undo}
+              onRedo={redo}
+              onClear={clearCell}
+              onToggleNoteMode={toggleNoteMode}
+              onHint={() => {}} // Disable hints in multiplayer for fairness
+              isPaused={false}
+              isCompleted={isCompleted}
+            />
 
-        {/* Numpad */}
-        <NumberPad
-          numberCounts={numberCounts}
-          selectedNumber={selectedNumber}
-          onSelectNumber={selectNumber}
-          isPaused={false}
-          isCompleted={isCompleted}
-        />
+            {/* Numpad */}
+            <NumberPad
+              numberCounts={numberCounts}
+              selectedNumber={selectedNumber}
+              onSelectNumber={selectNumber}
+              isPaused={false}
+              isCompleted={isCompleted}
+            />
+          </>
+        ) : (
+          <div className="max-w-[460px] w-full mx-auto mt-6 p-4 bg-indigo-500/5 border border-indigo-500/20 rounded-2xl text-center text-xs font-extrabold text-indigo-500 flex items-center justify-center gap-2">
+            <Eye className="w-4 h-4 animate-pulse" /> You are observing this match live as a spectator.
+          </div>
+        )}
 
         <div className="text-center text-xs text-slate-400 mt-4 flex items-center justify-center gap-1.5 font-semibold">
           <Clock className="w-3.5 h-3.5" /> Live Solve Timer: {formatTime(timerSeconds)}
@@ -598,12 +641,16 @@ export default function MultiplayerGamePage() {
               </div>
 
               <h3 className="text-2xl font-black text-slate-900 dark:text-white uppercase">
-                {room.winnerUsername === user.username ? "VICTORY!" : room.winnerUsername ? "DEFEAT" : "MATCH ENDED"}
+                {isSpectator
+                  ? "MATCH ENDED"
+                  : room.winnerUsername === user.username
+                  ? "VICTORY!"
+                  : room.winnerUsername
+                  ? "DEFEAT"
+                  : "MATCH ENDED"}
               </h3>
               <p className="text-slate-400 text-xs mt-1">
-                {room.winnerUsername === user.username
-                  ? "You solved the grid first!"
-                  : room.winnerUsername
+                {room.winnerUsername
                   ? `${room.winnerUsername} solved the grid first!`
                   : "All players struck out."}
               </p>
@@ -658,7 +705,7 @@ export default function MultiplayerGamePage() {
 
               {/* Action buttons */}
               <div className="space-y-2">
-                {!isCompleted && !isGameOver && (
+                {!isSpectator && !isCompleted && !isGameOver && (
                   <button
                     onClick={() => {
                       if (synth) synth.playClick();

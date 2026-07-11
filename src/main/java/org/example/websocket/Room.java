@@ -13,6 +13,7 @@ public class Room {
     private String winnerUsername = null;
     private long startTimestamp = 0;
     private String hostUsername;
+    private java.util.Set<String> spectators = new java.util.HashSet<>();
 
     public Room() {}
 
@@ -50,4 +51,7 @@ public class Room {
 
     public String getHostUsername() { return hostUsername; }
     public void setHostUsername(String hostUsername) { this.hostUsername = hostUsername; }
+
+    public java.util.Set<String> getSpectators() { return spectators; }
+    public void setSpectators(java.util.Set<String> spectators) { this.spectators = spectators; }
 }

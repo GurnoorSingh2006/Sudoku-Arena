@@ -25,4 +25,14 @@ public interface GameHistoryRepository extends JpaRepository<GameHistory, Long> 
 
     @Query("SELECT MIN(gh.solveTimeSeconds) FROM GameHistory gh WHERE gh.user = :user AND LOWER(gh.difficulty) = LOWER(:difficulty) AND gh.win = true")
     Integer findBestTimeByUserAndDifficulty(User user, String difficulty);
+
+    @org.springframework.data.jpa.repository.Modifying
+    @org.springframework.transaction.annotation.Transactional
+    @Query("DELETE FROM GameHistory gh WHERE gh.win = true AND gh.solveTimeSeconds < 60")
+    void deleteFastRuns();
+
+    @Query("SELECT MIN(gh.solveTimeSeconds) FROM GameHistory gh WHERE gh.user = :user AND gh.win = true")
+    Integer findBestTimeByUser(User user);
+
+    long countByUserAndDifficultyAndWin(User user, String difficulty, boolean win);
 }

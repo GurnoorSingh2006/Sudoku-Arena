@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { motion } from "framer-motion";
 import {
@@ -16,8 +16,11 @@ import {
   Moon,
   Sparkles,
   Calendar,
-  Check
+  Check,
+  Eye,
+  Swords
 } from "lucide-react";
+import { Client } from "@stomp/stompjs";
 import { apiFetch, clearAuthToken, getStoredUser, setStoredUser } from "@/utils/api";
 import { synth } from "@/utils/synth";
 
@@ -34,6 +37,12 @@ export default function DashboardPage() {
   const [loadingRoom, setLoadingRoom] = useState(false);
   const [theme, setTheme] = useState("light");
   const [dailyStatus, setDailyStatus] = useState<any>(null);
+  
+  const [activeRooms, setActiveRooms] = useState<any[]>([]);
+  const [friendsOnline, setFriendsOnline] = useState<any[]>([]);
+  
+  const stompClient = useRef<Client | null>(null);
+  const isConnected = useRef(false);
 
   // Authentication check and data fetch
   useEffect(() => {
@@ -65,6 +74,22 @@ export default function DashboardPage() {
           console.error("Failed to load daily leaderboard:", err);
         }
 
+        // Fetch Active Rooms
+        try {
+          const rooms = await apiFetch("/api/rooms/active");
+          setActiveRooms(rooms.filter((r: any) => r.state === "PLAYING" || r.state === "WAITING" || r.state === "COUNTDOWN"));
+        } catch (roomsErr) {
+          console.error("Error fetching active rooms:", roomsErr);
+        }
+
+        // Fetch Online Friends
+        try {
+          const friendsList = await apiFetch("/api/friends");
+          setFriendsOnline(friendsList.filter((f: any) => f.online));
+        } catch (friendsErr) {
+          console.error("Error fetching online friends:", friendsErr);
+        }
+
         // Fetch Daily Challenge status
         try {
           const dailyData = await apiFetch("/api/sudoku/daily");
@@ -79,10 +104,70 @@ export default function DashboardPage() {
 
     fetchData();
 
+    // Setup WebSocket connection for sending challenge invitations
+    const wsHost = typeof window !== "undefined" ? window.location.hostname : "localhost";
+    const wsUrl = process.env.NEXT_PUBLIC_WS_URL || `ws://${wsHost}:8080/ws`;
+    const client = new Client({
+      brokerURL: wsUrl,
+      reconnectDelay: 5000,
+    });
+
+    client.onConnect = () => {
+      isConnected.current = true;
+      stompClient.current = client;
+    };
+
+    client.onDisconnect = () => {
+      isConnected.current = false;
+      stompClient.current = null;
+    };
+
+    client.activate();
+
     // Check theme
     const savedTheme = localStorage.getItem("sudoku_theme") || "light";
     setTheme(savedTheme);
   }, [router]);
+
+  // Periodic ping loop every 20 seconds to report online status
+  useEffect(() => {
+    if (!user) return;
+    const pingLoop = setInterval(async () => {
+      try {
+        await apiFetch("/api/profile/ping", { method: "POST" });
+      } catch (e) {}
+    }, 20000);
+    return () => clearInterval(pingLoop);
+  }, [user]);
+
+  const handleChallengeDashboard = async (friendUsername: string) => {
+    if (!stompClient.current || !isConnected.current) {
+      alert("WebSocket connection is not ready yet. Please wait a moment.");
+      return;
+    }
+    if (synth) synth.playClick();
+
+    try {
+      // 1. Create room
+      const room = await apiFetch("/api/rooms/create?difficulty=Medium", { method: "POST" });
+      
+      // 2. Publish duel invite
+      stompClient.current.publish({
+        destination: "/app/friends/challenge",
+        body: JSON.stringify({
+          senderUsername: user.username,
+          recipientUsername: friendUsername,
+          roomCode: room.roomCode,
+          difficulty: "Medium"
+        })
+      });
+
+      // 3. Route to lobby
+      router.push(`/play/multi/${room.roomCode}`);
+    } catch (err: any) {
+      console.error("Failed to challenge friend from dashboard:", err);
+    }
+  };
 
   const toggleTheme = () => {
     const newTheme = theme === "light" ? "dark" : "light";
@@ -380,11 +465,120 @@ export default function DashboardPage() {
                 </form>
               </div>
             </section>
+
+            {/* Watch Live Games Section */}
+            <section className="glass-panel rounded-2xl p-6 border border-slate-200/50 dark:border-slate-800/40 flex flex-col">
+              <div className="flex items-center gap-3 mb-6">
+                <div className="p-2.5 rounded-xl bg-rose-50 dark:bg-rose-950/50 text-rose-500">
+                  <Eye className="w-6 h-6 animate-pulse" />
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-lg">Watch Live Matches</h3>
+                  <p className="text-xs text-slate-400">Spectate active games in real time</p>
+                </div>
+              </div>
+
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                {activeRooms.length === 0 ? (
+                  <div className="col-span-2 py-6 text-center text-xs text-slate-400 font-semibold bg-slate-50 dark:bg-slate-900/10 border border-slate-200/10 rounded-xl">
+                    No active multiplayer games right now.
+                  </div>
+                ) : (
+                  activeRooms.map((roomItem: any) => {
+                    const playerNames = Object.keys(roomItem.players || {});
+                    return (
+                      <div
+                        key={roomItem.roomCode}
+                        className="p-3 bg-white/40 dark:bg-slate-900/10 border border-slate-200/40 dark:border-slate-800/40 rounded-xl flex items-center justify-between text-xs"
+                      >
+                        <div className="min-w-0">
+                          <span className="font-extrabold text-slate-800 dark:text-slate-200 block">
+                            Room #{roomItem.roomCode}
+                          </span>
+                          <span className="text-[10px] text-slate-400 font-bold block uppercase mt-0.5">
+                            {roomItem.difficulty} • {playerNames.length} Players
+                          </span>
+                          <span className="text-[9px] text-indigo-500 font-black block mt-0.5">
+                            Status: {roomItem.state}
+                          </span>
+                        </div>
+                        <button
+                          onClick={() => {
+                            if (synth) synth.playClick();
+                            router.push(`/play/multi/${roomItem.roomCode}?spectate=true`);
+                          }}
+                          className="px-3 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-lg font-bold shadow-md shadow-rose-500/10 active:scale-95 transition-all cursor-pointer"
+                        >
+                          Spectate
+                        </button>
+                      </div>
+                    );
+                  })
+                )}
+              </div>
+            </section>
           </div>
         </div>
 
-        {/* RIGHT COLUMN: Tabbed Leaderboards */}
+        {/* RIGHT COLUMN: Tabbed Leaderboards & Friends Online */}
         <div>
+          {/* Friends Online Sidebar Widget */}
+          <section className="glass-panel rounded-2xl p-6 border border-slate-200/50 dark:border-slate-800/40 flex flex-col mb-8">
+            <div className="flex items-center justify-between mb-4">
+              <div className="flex items-center gap-3">
+                <div className="p-2 rounded-xl bg-indigo-50 dark:bg-indigo-950/50 text-indigo-500">
+                  <Users className="w-5 h-5" />
+                </div>
+                <div>
+                  <h3 className="font-extrabold text-sm">Friends Online</h3>
+                  <p className="text-[10px] text-slate-400">Duel active players</p>
+                </div>
+              </div>
+              <button
+                onClick={() => { if (synth) synth.playClick(); router.push("/friends"); }}
+                className="text-[10px] text-indigo-600 dark:text-indigo-400 hover:underline font-bold"
+              >
+                Manage
+              </button>
+            </div>
+
+            <div className="space-y-2.5 max-h-[180px] overflow-y-auto pr-1">
+              {friendsOnline.length === 0 ? (
+                <div className="py-4 text-center text-slate-400 text-xs font-semibold">
+                  No friends online right now.
+                </div>
+              ) : (
+                friendsOnline.map((friend: any) => (
+                  <div
+                    key={friend.username}
+                    className="flex items-center justify-between p-2 bg-slate-50/50 dark:bg-slate-900/10 border border-slate-100 dark:border-slate-900/40 rounded-xl"
+                  >
+                    <div className="flex items-center gap-2 min-w-0">
+                      <div className="relative">
+                        <img
+                          src={friend.avatarUrl || `https://api.dicebear.com/7.x/bottts/svg?seed=${friend.username}`}
+                          alt="Avatar"
+                          className="w-7 h-7 rounded-lg bg-slate-100 dark:bg-slate-800 object-contain p-0.5"
+                        />
+                        <span className="absolute -bottom-0.5 -right-0.5 w-2 h-2 rounded-full bg-emerald-500 border border-white dark:border-slate-950" />
+                      </div>
+                      <span className="text-xs font-bold text-slate-700 dark:text-slate-300 truncate">
+                        {friend.username}
+                      </span>
+                    </div>
+
+                    <button
+                      onClick={() => handleChallengeDashboard(friend.username)}
+                      className="px-2.5 py-1 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-[10px] font-black active:scale-95 transition-all cursor-pointer flex items-center gap-0.5"
+                    >
+                      <Swords className="w-3 h-3" /> Duel
+                    </button>
+                  </div>
+                ))
+              )}
+            </div>
+          </section>
+
           <section className="glass-panel rounded-2xl p-6 border border-slate-200/50 dark:border-slate-800/40 h-full flex flex-col">
             <div className="flex items-center gap-3 mb-4">
               <div className="p-2.5 rounded-xl bg-amber-50 dark:bg-amber-950/50 text-amber-500">

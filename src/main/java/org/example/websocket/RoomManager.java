@@ -187,6 +187,31 @@ public class RoomManager {
         return room;
     }
 
+    public Room addSpectator(String roomCode, String username) {
+        Room room = getRoom(roomCode);
+        if (room == null) {
+            throw new IllegalArgumentException("Room not found");
+        }
+        if (room.getSpectators() == null) {
+            room.setSpectators(new java.util.HashSet<>());
+        }
+        room.getSpectators().add(username);
+        return room;
+    }
+
+    public Room removeSpectator(String roomCode, String username) {
+        Room room = getRoom(roomCode);
+        if (room == null) return null;
+        if (room.getSpectators() != null) {
+            room.getSpectators().remove(username);
+        }
+        return room;
+    }
+
+    public java.util.Collection<Room> getActiveRooms() {
+        return activeRooms.values();
+    }
+
     private String generateRoomCode() {
         String chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
         StringBuilder sb = new StringBuilder();

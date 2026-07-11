@@ -7,16 +7,7 @@ import { ArrowLeft, Edit2, Check, User as UserIcon, Calendar, Trophy, Award, Clo
 import { apiFetch, getStoredUser, setStoredUser } from "@/utils/api";
 import { synth } from "@/utils/synth";
 
-const AVATAR_PRESETS = [
-  "https://api.dicebear.com/7.x/bottts/svg?seed=Robot1",
-  "https://api.dicebear.com/7.x/bottts/svg?seed=Robot2",
-  "https://api.dicebear.com/7.x/bottts/svg?seed=Gurnoor",
-  "https://api.dicebear.com/7.x/bottts/svg?seed=Arena",
-  "https://api.dicebear.com/7.x/bottts/svg?seed=Sudoku",
-  "https://api.dicebear.com/7.x/bottts/svg?seed=Play",
-  "https://api.dicebear.com/7.x/bottts/svg?seed=Master",
-  "https://api.dicebear.com/7.x/bottts/svg?seed=Pro"
-];
+
 
 export default function ProfilePage() {
   const router = useRouter();
@@ -153,10 +144,10 @@ export default function ProfilePage() {
                 src={user.avatarUrl}
                 alt="Avatar"
                 className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl bg-indigo-50 dark:bg-indigo-950/40 object-contain p-1 border border-indigo-200/20 cursor-pointer shadow-md group-hover:scale-105 transition-transform duration-200"
-                onClick={() => setShowAvatarSelector(true)}
+                onClick={() => { if (synth) synth.playClick(); router.push("/profile/avatars"); }}
               />
               <button
-                onClick={() => setShowAvatarSelector(true)}
+                onClick={() => { if (synth) synth.playClick(); router.push("/profile/avatars"); }}
                 className="absolute bottom-1 right-1 p-1.5 rounded-lg bg-indigo-600 text-white border border-indigo-500 shadow hover:bg-indigo-700 active:scale-95 transition-all cursor-pointer"
                 title="Choose Avatar"
               >
@@ -211,53 +202,7 @@ export default function ProfilePage() {
           </div>
         </section>
 
-        {/* Avatar Selection Dialog */}
-        <AnimatePresence>
-          {showAvatarSelector && (
-            <div className="fixed inset-0 z-50 flex items-center justify-center bg-slate-900/60 dark:bg-slate-950/80 backdrop-blur-sm p-4">
-              <motion.div
-                initial={{ scale: 0.9, opacity: 0 }}
-                animate={{ scale: 1, opacity: 1 }}
-                exit={{ scale: 0.9, opacity: 0 }}
-                className="glass-panel max-w-md w-full rounded-2xl p-6 border border-slate-200/50 dark:border-slate-800/40 text-center shadow-2xl"
-              >
-                <h3 className="font-extrabold text-lg mb-2">Select Avatar</h3>
-                <p className="text-xs text-slate-400 mb-6">Choose your robot mascot preset</p>
 
-                <div className="grid grid-cols-4 gap-3 mb-6">
-                  {AVATAR_PRESETS.map((avatar) => (
-                    <img
-                      key={avatar}
-                      src={avatar}
-                      alt="Avatar Preset"
-                      className={`
-                        w-16 h-16 rounded-xl bg-slate-100 dark:bg-slate-900 border p-1 object-contain cursor-pointer transition-all duration-200
-                        ${selectedAvatar === avatar ? "border-indigo-600 scale-105 shadow-md shadow-indigo-500/10" : "border-slate-200/50 dark:border-slate-800/50 hover:border-indigo-400"}
-                      `}
-                      onClick={() => setSelectedAvatar(avatar)}
-                    />
-                  ))}
-                </div>
-
-                <div className="flex gap-2">
-                  <button
-                    onClick={() => setShowAvatarSelector(false)}
-                    className="flex-1 py-2.5 bg-slate-100 hover:bg-slate-200 dark:bg-slate-900 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300 rounded-xl font-bold transition-all text-xs cursor-pointer"
-                  >
-                    Cancel
-                  </button>
-                  <button
-                    disabled={saving}
-                    onClick={() => handleUpdateProfile({ avatarUrl: selectedAvatar })}
-                    className="flex-1 py-2.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-xl font-bold shadow-md active:scale-95 transition-all text-xs cursor-pointer"
-                  >
-                    Save Avatar
-                  </button>
-                </div>
-              </motion.div>
-            </div>
-          )}
-        </AnimatePresence>
 
         {/* Key Metrics cards grid */}
         <section className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">

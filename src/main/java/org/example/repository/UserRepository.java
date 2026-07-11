@@ -18,7 +18,8 @@ public interface UserRepository extends JpaRepository<User, Long> {
     // Leaderboard: Top 20 users by games won or a calculated score
     List<User> findTop20ByOrderByGamesWonDesc();
 
-    // Leaderboard: Top 20 users sorted by fastest solve time for a difficulty (where fastest solve time is not null)
     @Query("SELECT u FROM User u WHERE u.fastestSolveTimeSeconds IS NOT NULL ORDER BY u.fastestSolveTimeSeconds ASC")
     List<User> findTop20ByOrderByFastestSolveTimeSecondsAsc();
+
+    List<User> findByUsernameContainingIgnoreCase(String username);
 }

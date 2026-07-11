@@ -22,7 +22,44 @@ public class User {
 
     private String avatarUrl;
 
+    @ElementCollection(fetch = FetchType.EAGER)
+    @CollectionTable(name = "user_unlocked_avatars", joinColumns = @JoinColumn(name = "user_id"))
+    @Column(name = "avatar_id")
+    private java.util.Set<String> unlockedAvatars = new java.util.HashSet<>();
+
+    private LocalDateTime lastActiveAt = LocalDateTime.now();
+
     private LocalDateTime createdAt = LocalDateTime.now();
+
+    public java.util.Set<String> getUnlockedAvatars() {
+        if (unlockedAvatars == null) {
+            unlockedAvatars = new java.util.HashSet<>();
+        }
+        // Ensure defaults are unlocked
+        unlockedAvatars.add("bottts_1");
+        unlockedAvatars.add("bottts_2");
+        unlockedAvatars.add("bottts_3");
+        unlockedAvatars.add("bottts_4");
+        unlockedAvatars.add("bottts_5");
+        unlockedAvatars.add("chess_king");
+        unlockedAvatars.add("chess_pawn");
+        unlockedAvatars.add("animal_cat");
+        unlockedAvatars.add("fantasy_goblin");
+        unlockedAvatars.add("special_survivor");
+        return unlockedAvatars;
+    }
+
+    public void setUnlockedAvatars(java.util.Set<String> unlockedAvatars) {
+        this.unlockedAvatars = unlockedAvatars;
+    }
+
+    public LocalDateTime getLastActiveAt() { return lastActiveAt; }
+    public void setLastActiveAt(LocalDateTime lastActiveAt) { this.lastActiveAt = lastActiveAt; }
+
+    public boolean isOnline() {
+        if (lastActiveAt == null) return false;
+        return lastActiveAt.isAfter(LocalDateTime.now().minusSeconds(45));
+    }
 
     // Statistics embedded directly for fast queries
     private int gamesPlayed = 0;
