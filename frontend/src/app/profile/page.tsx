@@ -138,17 +138,24 @@ export default function ProfilePage() {
         <section className="glass-panel rounded-3xl p-6 sm:p-8 border border-slate-200/50 dark:border-slate-800/40 shadow-xl mb-8">
           <div className="flex flex-col sm:flex-row items-center gap-6 text-center sm:text-left">
             
-            {/* Avatar block with selection trigger */}
-            <div className="relative group">
+            {/* Avatar block with radial XP progress ring */}
+            <div className="relative w-28 h-28 sm:w-32 sm:h-32 flex items-center justify-center group">
+              <svg className="absolute inset-0 w-full h-full transform -rotate-90">
+                <circle cx="56" cy="56" r="48" className="text-slate-100 dark:text-slate-900/60" strokeWidth="4.5" fill="transparent" stroke="currentColor" />
+                <circle cx="56" cy="56" r="48" className="text-indigo-500" strokeWidth="4.5" fill="transparent" strokeDasharray={2 * Math.PI * 48} strokeDashoffset={2 * Math.PI * 48 * (1 - ((stats.gamesWon * 35 + stats.gamesPlayed * 10) % 100) / 100)} stroke="currentColor" strokeLinecap="round" />
+              </svg>
               <img
                 src={user.avatarUrl}
                 alt="Avatar"
-                className="w-24 h-24 sm:w-28 sm:h-28 rounded-2xl bg-indigo-50 dark:bg-indigo-950/40 object-contain p-1 border border-indigo-200/20 cursor-pointer shadow-md group-hover:scale-105 transition-transform duration-200"
+                className="w-20 h-20 sm:w-24 sm:h-24 rounded-full bg-white dark:bg-slate-900 object-contain p-1 border border-indigo-200/10 cursor-pointer shadow-md group-hover:scale-105 transition-transform duration-200 relative z-10"
                 onClick={() => { if (synth) synth.playClick(); router.push("/profile/avatars"); }}
               />
+              <div className="absolute -top-1 -left-1 bg-indigo-600 text-white text-[9px] font-black px-2 py-0.5 rounded-full z-20 shadow-md">
+                Lvl {Math.max(1, Math.floor((stats.gamesWon * 35 + stats.gamesPlayed * 10) / 100) + 1)}
+              </div>
               <button
                 onClick={() => { if (synth) synth.playClick(); router.push("/profile/avatars"); }}
-                className="absolute bottom-1 right-1 p-1.5 rounded-lg bg-indigo-600 text-white border border-indigo-500 shadow hover:bg-indigo-700 active:scale-95 transition-all cursor-pointer"
+                className="absolute bottom-1 right-1 p-1.5 rounded-lg bg-indigo-600 text-white border border-indigo-500 shadow hover:bg-indigo-700 active:scale-95 transition-all cursor-pointer z-20"
                 title="Choose Avatar"
               >
                 <Edit2 className="w-3.5 h-3.5" />
@@ -202,8 +209,6 @@ export default function ProfilePage() {
           </div>
         </section>
 
-
-
         {/* Key Metrics cards grid */}
         <section className="grid grid-cols-2 md:grid-cols-4 gap-4 mb-8">
           <div className="glass-panel p-4 rounded-2xl border border-slate-200/50 dark:border-slate-800/40 flex items-center gap-3">
@@ -243,6 +248,44 @@ export default function ProfilePage() {
             <div>
               <span className="text-[10px] text-slate-400 block uppercase font-bold tracking-wider">Avg Time</span>
               <span className="text-base font-extrabold text-slate-800 dark:text-white">{formatTime(avgSolveTime)}</span>
+            </div>
+          </div>
+        </section>
+
+        {/* Recent Achievements */}
+        <section className="mb-8">
+          <div className="flex items-center gap-2 mb-4">
+            <Award className="w-5 h-5 text-indigo-500" />
+            <h3 className="font-extrabold text-lg">Arena Achievements</h3>
+          </div>
+          <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
+            <div className={`glass-panel p-4 rounded-2xl border flex flex-col justify-between ${stats.gamesPlayed >= 50 ? "border-indigo-500/30 bg-indigo-500/5" : "opacity-60"}`}>
+              <div>
+                <span className="text-xs font-black block text-slate-850 dark:text-white">Centurion</span>
+                <span className="text-[10px] text-slate-450 mt-1 block">Play 50 games</span>
+              </div>
+              <span className="text-[10px] font-bold block mt-3 text-indigo-500">{stats.gamesPlayed >= 50 ? "✅ Unlocked" : "🔒 Locked"}</span>
+            </div>
+            <div className={`glass-panel p-4 rounded-2xl border flex flex-col justify-between ${stats.bestTimeExpert && stats.bestTimeExpert < 300 ? "border-indigo-500/30 bg-indigo-500/5" : "opacity-60"}`}>
+              <div>
+                <span className="text-xs font-black block text-slate-850 dark:text-white">Expert Speedster</span>
+                <span className="text-[10px] text-slate-450 mt-1 block">Solve Expert under 5m</span>
+              </div>
+              <span className="text-[10px] font-bold block mt-3 text-indigo-500">{stats.bestTimeExpert && stats.bestTimeExpert < 300 ? "✅ Unlocked" : "🔒 Locked"}</span>
+            </div>
+            <div className={`glass-panel p-4 rounded-2xl border flex flex-col justify-between ${winRatio >= 80 && stats.gamesWon >= 5 ? "border-indigo-500/30 bg-indigo-500/5" : "opacity-60"}`}>
+              <div>
+                <span className="text-xs font-black block text-slate-850 dark:text-white">Unstoppable</span>
+                <span className="text-[10px] text-slate-450 mt-1 block">Win Ratio 80%+ (5+ wins)</span>
+              </div>
+              <span className="text-[10px] font-bold block mt-3 text-indigo-500">{winRatio >= 80 && stats.gamesWon >= 5 ? "✅ Unlocked" : "🔒 Locked"}</span>
+            </div>
+            <div className={`glass-panel p-4 rounded-2xl border flex flex-col justify-between ${stats.dailyChallengesSolved >= 7 ? "border-indigo-500/30 bg-indigo-500/5" : "opacity-60"}`}>
+              <div>
+                <span className="text-xs font-black block text-slate-850 dark:text-white">Streak Master</span>
+                <span className="text-[10px] text-slate-450 mt-1 block">Solve 7 daily challenges</span>
+              </div>
+              <span className="text-[10px] font-bold block mt-3 text-indigo-500">{stats.dailyChallengesSolved >= 7 ? "✅ Unlocked" : "🔒 Locked"}</span>
             </div>
           </div>
         </section>

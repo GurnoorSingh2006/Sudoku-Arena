@@ -89,3 +89,51 @@ body {
   animation: wiggle 0.25s ease-in-out;
 }
 
+/* Premium Animations & Styles */
+@keyframes shimmer {
+  0% { background-position: -200% 0; }
+  100% { background-position: 200% 0; }
+}
+
+.shimmer-loading {
+  background: linear-gradient(90deg, #e2e8f0 25%, #f1f5f9 50%, #e2e8f0 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite linear;
+}
+
+.dark .shimmer-loading {
+  background: linear-gradient(90deg, #1e293b 25%, #334155 50%, #1e293b 75%);
+  background-size: 200% 100%;
+  animation: shimmer 1.5s infinite linear;
+}
+
+@keyframes floatBackground {
+  0% { transform: translateY(0px) rotate(0deg); opacity: 0.01; }
+  50% { transform: translateY(-30px) rotate(180deg); opacity: 0.04; }
+  100% { transform: translateY(0px) rotate(360deg); opacity: 0.01; }
+}
+
+.ambient-particle {
+  animation: floatBackground 25s ease-in-out infinite;
+}
+
+.shadow-premium {
+  box-shadow: 0 10px 30px -10px rgba(0, 0, 0, 0.04), 
+              0 1px 1px 0 rgba(0, 0, 0, 0.02);
+}
+
+.dark .shadow-premium {
+  box-shadow: 0 20px 40px -15px rgba(0, 0, 0, 0.5), 
+              0 1px 3px 0 rgba(0, 0, 0, 0.3);
+}
+
+.border-neon {
+  border-color: rgba(99, 102, 241, 0.3);
+}
+
+.border-neon:hover {
+  border-color: rgba(99, 102, 241, 0.6);
+  box-shadow: 0 0 15px rgba(99, 102, 241, 0.15);
+}
+
+

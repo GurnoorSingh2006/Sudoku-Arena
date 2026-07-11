@@ -40,9 +40,23 @@ export default function DashboardPage() {
   
   const [activeRooms, setActiveRooms] = useState<any[]>([]);
   const [friendsOnline, setFriendsOnline] = useState<any[]>([]);
+  const [timeLeft, setTimeLeft] = useState("");
   
   const stompClient = useRef<Client | null>(null);
   const isConnected = useRef(false);
+
+  useEffect(() => {
+    const timer = setInterval(() => {
+      const now = new Date();
+      const tomorrow = new Date(now.getFullYear(), now.getMonth(), now.getDate() + 1);
+      const diff = tomorrow.getTime() - now.getTime();
+      const h = Math.floor(diff / (1000 * 60 * 60));
+      const m = Math.floor((diff / (1000 * 60)) % 60);
+      const s = Math.floor((diff / 1000) % 60);
+      setTimeLeft(`${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}:${String(s).padStart(2, "0")}`);
+    }, 1000);
+    return () => clearInterval(timer);
+  }, []);
 
   // Authentication check and data fetch
   useEffect(() => {
@@ -276,32 +290,84 @@ export default function DashboardPage() {
         {/* LEFT COLUMN: Profile Stats & Game Select */}
         <div className="lg:col-span-2 space-y-8">
           
-          {/* Greeting & Quick Navigation Card */}
-          <section className="glass-panel rounded-2xl p-6 border border-slate-200/50 dark:border-slate-800/40 bg-gradient-to-br from-indigo-500/5 to-purple-500/5">
-            <div className="flex flex-col sm:flex-row items-center justify-between gap-4">
-              <div className="flex items-center gap-4 text-center sm:text-left flex-col sm:flex-row">
-                <img
-                  src={user.avatarUrl || `https://api.dicebear.com/7.x/bottts/svg?seed=${user.username}`}
-                  alt="Avatar"
-                  className="w-14 h-14 rounded-2xl bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-200/20 p-1 object-contain"
-                />
-                <div>
-                  <h2 className="text-xl font-black text-slate-800 dark:text-white">
-                    Welcome back, {user.username}! 👋
-                  </h2>
-                  <p className="text-xs text-slate-400 mt-1">Ready for another challenge? Compare your solved times and metrics.</p>
+          {/* Gamified Welcome Card */}
+          <section className="glass-panel rounded-3xl p-6 border border-slate-200/50 dark:border-slate-800/40 bg-gradient-to-br from-indigo-500/10 via-purple-500/5 to-slate-900/10 shadow-premium relative overflow-hidden">
+            {/* Background design elements */}
+            <div className="absolute top-0 right-0 w-48 h-48 bg-indigo-500/10 rounded-full blur-2xl pointer-events-none" />
+            
+            <div className="flex flex-col md:flex-row items-center justify-between gap-6 relative z-10">
+              <div className="flex flex-col sm:flex-row items-center gap-5 text-center sm:text-left w-full md:w-auto">
+                <div className="relative group">
+                  <div className="absolute -inset-1 bg-gradient-to-r from-indigo-500 to-purple-600 rounded-2xl blur opacity-30 group-hover:opacity-60 transition duration-300" />
+                  <img
+                    src={user.avatarUrl || `https://api.dicebear.com/7.x/bottts/svg?seed=${user.username}`}
+                    alt="Avatar"
+                    className="w-16 h-16 sm:w-20 sm:h-20 rounded-2xl bg-indigo-50 dark:bg-indigo-950/40 object-contain p-1 border border-indigo-200/20 relative z-10 bg-white"
+                  />
+                  <div className="absolute -top-2 -left-2 bg-indigo-600 text-white text-[10px] font-black px-2 py-0.5 rounded-full z-20 shadow-md">
+                    Lvl {Math.max(1, Math.floor((user.gamesWon * 35 + user.gamesPlayed * 10) / 100) + 1)}
+                  </div>
+                </div>
+
+                <div className="flex-1 min-w-0">
+                  <div className="flex flex-col sm:flex-row items-center gap-2">
+                    <h2 className="text-xl sm:text-2xl font-black text-slate-800 dark:text-white uppercase tracking-tight flex items-center justify-center sm:justify-start gap-2">
+                      {user.username}
+                      <span className="text-xs px-2 py-0.5 rounded-md bg-indigo-100 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 font-extrabold border border-indigo-200/10">
+                        {user.gamesWon >= 50 ? "Grandmaster" : user.gamesWon >= 25 ? "Diamond" : user.gamesWon >= 15 ? "Platinum" : user.gamesWon >= 8 ? "Gold" : user.gamesWon >= 3 ? "Silver" : "Bronze"}
+                      </span>
+                    </h2>
+                  </div>
+                  
+                  {/* XP Bar */}
+                  <div className="mt-3 w-full sm:w-64">
+                    <div className="flex justify-between text-[9px] font-bold text-slate-400 uppercase tracking-wide mb-1">
+                      <span>XP Progress</span>
+                      <span>{((user.gamesWon * 35 + user.gamesPlayed * 10) % 100)} / 100 XP</span>
+                    </div>
+                    <div className="w-full bg-slate-200 dark:bg-slate-800 h-2 rounded-full overflow-hidden">
+                      <motion.div 
+                        initial={{ width: 0 }}
+                        animate={{ width: `${((user.gamesWon * 35 + user.gamesPlayed * 10) % 100)}%` }}
+                        transition={{ duration: 1, ease: "easeOut" }}
+                        className="h-full bg-gradient-to-r from-indigo-500 to-purple-600"
+                      />
+                    </div>
+                  </div>
+
+                  {/* Daily Streak & Total Solves stats row */}
+                  <div className="flex items-center gap-4 mt-4 text-[10px] uppercase font-bold text-slate-500 justify-center sm:justify-start">
+                    <span className="flex items-center gap-1.5 text-amber-500 bg-amber-500/10 px-2 py-1 rounded-lg border border-amber-500/10">
+                      🔥 {user.gamesWon > 0 ? (user.gamesWon % 5) + 2 : 1} Day Streak
+                    </span>
+                    <span className="flex items-center gap-1.5 text-emerald-500 bg-emerald-500/10 px-2 py-1 rounded-lg border border-emerald-500/10">
+                      🎯 {user.gamesWon} Solves
+                    </span>
+                  </div>
                 </div>
               </div>
 
-              <button
-                onClick={() => {
-                  if (synth) synth.playClick();
-                  router.push("/profile");
-                }}
-                className="px-5 py-2.5 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-800 rounded-xl font-bold transition-all text-xs flex items-center gap-1.5 shadow-sm active:scale-95 cursor-pointer"
-              >
-                <UserIcon className="w-4 h-4 text-indigo-500" /> View Profile & Stats
-              </button>
+              {/* Action buttons */}
+              <div className="flex flex-row md:flex-col gap-2 w-full md:w-auto">
+                <button
+                  onClick={() => {
+                    if (synth) synth.playClick();
+                    router.push(`/play/single?difficulty=${selectedDifficulty}`);
+                  }}
+                  className="flex-1 md:flex-none flex items-center justify-center gap-1.5 px-4 py-2.5 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white rounded-xl font-bold text-xs shadow-md shadow-indigo-500/15 active:scale-95 transition-all cursor-pointer"
+                >
+                  <Play className="w-3.5 h-3.5 fill-white" /> Resume Last
+                </button>
+                <button
+                  onClick={() => {
+                    if (synth) synth.playClick();
+                    router.push("/profile");
+                  }}
+                  className="flex-1 md:flex-none flex items-center justify-center gap-1.5 px-4 py-2.5 bg-white dark:bg-slate-900 hover:bg-slate-50 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-200 border border-slate-200 dark:border-slate-800 rounded-xl font-bold text-xs shadow-sm active:scale-95 transition-all cursor-pointer"
+                >
+                  <UserIcon className="w-3.5 h-3.5 text-indigo-500" /> Stats Page
+                </button>
+              </div>
             </div>
           </section>
 
@@ -311,23 +377,30 @@ export default function DashboardPage() {
             {/* Daily Challenge Card */}
             <section className="glass-panel rounded-2xl p-6 border border-slate-200/50 dark:border-slate-800/40 flex flex-col justify-between">
               <div>
-                <div className="flex items-center gap-3 mb-6">
-                  <div className="p-2.5 rounded-xl bg-amber-50 dark:bg-amber-950/50 text-amber-500">
-                    <Calendar className="w-6 h-6" />
+                <div className="flex items-center justify-between mb-6">
+                  <div className="flex items-center gap-3">
+                    <div className="p-2.5 rounded-xl bg-amber-50 dark:bg-amber-950/50 text-amber-500">
+                      <Calendar className="w-6 h-6" />
+                    </div>
+                    <div>
+                      <h3 className="font-extrabold text-lg">Daily</h3>
+                      <p className="text-xs text-slate-400">Unique daily puzzle</p>
+                    </div>
                   </div>
-                  <div>
-                    <h3 className="font-extrabold text-lg">Daily Challenge</h3>
-                    <p className="text-xs text-slate-400">Unique daily puzzle</p>
-                  </div>
+                  <span className="text-[9px] bg-amber-500/15 border border-amber-500/20 text-amber-600 dark:text-amber-400 font-extrabold px-1.5 py-0.5 rounded-md">
+                    +50 XP
+                  </span>
                 </div>
 
                 {dailyStatus ? (
                   <div className="space-y-4 mb-6">
                     <div className="p-4 bg-slate-100/50 dark:bg-slate-900/30 rounded-xl border border-slate-200/30 text-center">
-                      <span className="text-[10px] text-slate-400 uppercase tracking-wider block font-bold">Today's Date</span>
-                      <span className="text-base font-extrabold text-slate-700 dark:text-slate-200">{dailyStatus.date}</span>
+                      <span className="text-[10px] text-slate-400 uppercase tracking-wider block font-bold">Time Left</span>
+                      <span className="text-base font-extrabold text-slate-700 dark:text-slate-200 font-mono tracking-wider block mt-1">
+                        {timeLeft || "--:--:--"}
+                      </span>
                       <span className="mt-2 text-xs px-2.5 py-0.5 rounded-full bg-indigo-50 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-400 font-bold border border-indigo-200/30 inline-block">
-                        Difficulty: {dailyStatus.difficulty}
+                        {dailyStatus.difficulty}
                       </span>
                     </div>
                   </div>
@@ -356,40 +429,45 @@ export default function DashboardPage() {
             </section>
             
             {/* Single Player setup */}
-            <section className="glass-panel rounded-2xl p-6 border border-slate-200/50 dark:border-slate-800/40 flex flex-col">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="p-2.5 rounded-xl bg-indigo-50 dark:bg-indigo-950/50 text-indigo-500">
-                  <UserIcon className="w-6 h-6" />
+            <section className="glass-panel rounded-2xl p-6 border border-slate-200/50 dark:border-slate-800/40 flex flex-col justify-between">
+              <div>
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="p-2.5 rounded-xl bg-indigo-50 dark:bg-indigo-950/50 text-indigo-500">
+                    <UserIcon className="w-6 h-6" />
+                  </div>
+                  <div>
+                    <h3 className="font-extrabold text-lg">Single Player</h3>
+                    <p className="text-xs text-slate-400">Solve at your pace</p>
+                  </div>
                 </div>
-                <div>
-                  <h3 className="font-extrabold text-lg">Single Player</h3>
-                  <p className="text-xs text-slate-400">Play at your own pace</p>
-                </div>
-              </div>
 
-              {/* Difficulty selector */}
-              <div className="space-y-2 mb-8 flex-1">
-                <label className="text-xs font-bold uppercase tracking-wider text-slate-400 block mb-3">
-                  Difficulty Level
-                </label>
-                <div className="grid grid-cols-2 gap-2">
-                  {["Easy", "Medium", "Hard", "Expert"].map((diff) => (
-                    <button
-                      key={diff}
-                      type="button"
-                      onClick={() => { setSelectedDifficulty(diff); if (synth) synth.playClick(); }}
-                      className={`
-                        py-3 px-4 rounded-xl border text-sm font-bold transition-all cursor-pointer
-                        ${
-                          selectedDifficulty === diff
-                            ? "bg-indigo-600 border-indigo-600 text-white shadow-md shadow-indigo-500/20"
-                            : "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:border-slate-300 dark:hover:border-slate-700"
-                        }
-                      `}
-                    >
-                      {diff}
-                    </button>
-                  ))}
+                {/* Difficulty selector */}
+                <div className="space-y-2 mb-6">
+                  <label className="text-[10px] font-black uppercase tracking-wider text-slate-400 block mb-2">
+                    Select Difficulty
+                  </label>
+                  <div className="grid grid-cols-2 gap-2">
+                    {["Easy", "Medium", "Hard", "Expert"].map((diff) => (
+                      <button
+                        key={diff}
+                        type="button"
+                        onClick={() => { setSelectedDifficulty(diff); if (synth) synth.playClick(); }}
+                        className={`
+                          py-2.5 px-3 rounded-xl border text-xs font-bold transition-all cursor-pointer text-left flex flex-col justify-between min-h-[58px]
+                          ${
+                            selectedDifficulty === diff
+                              ? "bg-indigo-600 border-indigo-600 text-white shadow-md shadow-indigo-500/10"
+                              : "bg-white dark:bg-slate-900 border-slate-200 dark:border-slate-800 text-slate-700 dark:text-slate-300 hover:border-slate-300 dark:hover:border-slate-700"
+                          }
+                        `}
+                      >
+                        <span>{diff}</span>
+                        <span className={`text-[8px] font-semibold block uppercase tracking-wider ${selectedDifficulty === diff ? "text-indigo-200" : "text-slate-400"}`}>
+                          {diff === "Easy" ? "5m avg" : diff === "Medium" ? "10m avg" : diff === "Hard" ? "15m avg" : "22m avg"}
+                        </span>
+                      </button>
+                    ))}
+                  </div>
                 </div>
               </div>
 
@@ -402,67 +480,69 @@ export default function DashboardPage() {
             </section>
 
             {/* Multiplayer setup */}
-            <section className="glass-panel rounded-2xl p-6 border border-slate-200/50 dark:border-slate-800/40 flex flex-col">
-              <div className="flex items-center gap-3 mb-6">
-                <div className="p-2.5 rounded-xl bg-purple-50 dark:bg-purple-950/50 text-purple-500">
-                  <Users className="w-6 h-6" />
-                </div>
-                <div>
-                  <h3 className="font-extrabold text-lg">Play with Friends</h3>
-                  <p className="text-xs text-slate-400">Compete in real-time matches</p>
-                </div>
-              </div>
-
-              <div className="space-y-6 flex-1">
-                {/* Host button */}
-                <div>
-                  <button
-                    onClick={handleCreateMultiplayer}
-                    disabled={loadingRoom}
-                    className="w-full flex items-center justify-center gap-2 py-3.5 bg-purple-600 text-white rounded-xl font-bold hover:bg-purple-700 active:scale-[0.98] transition-all disabled:opacity-50 cursor-pointer"
-                  >
-                    {loadingRoom ? (
-                      <span className="border-2 border-white/30 border-t-white rounded-full w-5 h-5 animate-spin" />
-                    ) : (
-                      <>Host Lobby ({selectedDifficulty})</>
-                    )}
-                  </button>
-                </div>
-
-                {/* Separation */}
-                <div className="relative">
-                  <div className="absolute inset-0 flex items-center">
-                    <div className="w-full border-t border-slate-200 dark:border-slate-800" />
+            <section className="glass-panel rounded-2xl p-6 border border-slate-200/50 dark:border-slate-800/40 flex flex-col justify-between">
+              <div>
+                <div className="flex items-center gap-3 mb-6">
+                  <div className="p-2.5 rounded-xl bg-purple-50 dark:bg-purple-950/50 text-purple-500">
+                    <Users className="w-6 h-6" />
                   </div>
-                  <div className="relative flex justify-center text-xs uppercase">
-                    <span className="px-2 bg-slate-50 dark:bg-[#0e1628] text-slate-500 dark:text-slate-400">
-                      Or Join Room
-                    </span>
+                  <div>
+                    <h3 className="font-extrabold text-lg">Sudoku Duel</h3>
+                    <p className="text-xs text-slate-400">Play real-time multiplayer</p>
                   </div>
                 </div>
 
-                {/* Join Form */}
-                <form onSubmit={handleJoinMultiplayer} className="space-y-3">
-                  <div className="flex gap-2">
-                    <input
-                      type="text"
-                      maxLength={6}
-                      value={roomCodeToJoin}
-                      onChange={(e) => setRoomCodeToJoin(e.target.value.toUpperCase())}
-                      placeholder="ENTER CODE"
-                      className="flex-1 px-4 py-3 border border-slate-200 dark:border-slate-800 rounded-xl bg-white/50 dark:bg-slate-950/40 text-center font-bold tracking-widest text-slate-900 dark:text-white uppercase placeholder:normal-case placeholder:font-normal placeholder:tracking-normal placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500 text-sm"
-                    />
+                <div className="space-y-4">
+                  {/* Host button */}
+                  <div>
                     <button
-                      type="submit"
-                      className="px-6 py-3 bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 text-white dark:text-slate-900 rounded-xl font-bold transition-all text-sm cursor-pointer"
+                      onClick={handleCreateMultiplayer}
+                      disabled={loadingRoom}
+                      className="w-full flex items-center justify-center gap-2 py-3 bg-purple-600 text-white rounded-xl font-bold hover:bg-purple-700 active:scale-[0.98] transition-all disabled:opacity-50 cursor-pointer text-xs"
                     >
-                      Join
+                      {loadingRoom ? (
+                        <span className="border-2 border-white/30 border-t-white rounded-full w-4 h-4 animate-spin" />
+                      ) : (
+                        <>Host Duel ({selectedDifficulty})</>
+                      )}
                     </button>
                   </div>
-                  {joinError && (
-                    <p className="text-xs text-rose-500 font-medium text-center">{joinError}</p>
-                  )}
-                </form>
+
+                  {/* Separation */}
+                  <div className="relative">
+                    <div className="absolute inset-0 flex items-center">
+                      <div className="w-full border-t border-slate-200 dark:border-slate-800" />
+                    </div>
+                    <div className="relative flex justify-center text-[9px] uppercase font-black tracking-widest text-slate-400">
+                      <span className="px-2 bg-slate-50 dark:bg-[#080d1a]">
+                        Or Join Room
+                      </span>
+                    </div>
+                  </div>
+
+                  {/* Join Form */}
+                  <form onSubmit={handleJoinMultiplayer} className="space-y-2.5">
+                    <div className="flex gap-2">
+                      <input
+                        type="text"
+                        maxLength={6}
+                        value={roomCodeToJoin}
+                        onChange={(e) => setRoomCodeToJoin(e.target.value.toUpperCase())}
+                        placeholder="ENTER CODE"
+                        className="flex-1 px-3 py-2 border border-slate-200 dark:border-slate-800 rounded-xl bg-white/50 dark:bg-slate-950/40 text-center font-bold tracking-widest text-slate-900 dark:text-white uppercase placeholder:normal-case placeholder:font-normal placeholder:tracking-normal placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-purple-500 text-xs"
+                      />
+                      <button
+                        type="submit"
+                        className="px-4 py-2 bg-slate-900 hover:bg-slate-800 dark:bg-white dark:hover:bg-slate-100 text-white dark:text-slate-900 rounded-xl font-bold transition-all text-xs cursor-pointer shadow-sm"
+                      >
+                        Join
+                      </button>
+                    </div>
+                    {joinError && (
+                      <p className="text-[10px] text-rose-500 font-medium text-center">{joinError}</p>
+                    )}
+                  </form>
+                </div>
               </div>
             </section>
 
@@ -654,39 +734,127 @@ export default function DashboardPage() {
                   );
                 }
 
-                return currentList.map((player, idx) => (
-                  <div
-                    key={player.id || idx}
-                    className={`
-                      flex items-center justify-between p-3 rounded-xl border transition-all duration-200
-                      ${
-                        player.isSelf
-                          ? "bg-indigo-50/50 dark:bg-indigo-950/20 border-indigo-500/30"
-                          : "bg-white/40 dark:bg-slate-900/10 border-slate-100 dark:border-slate-900/50"
-                      }
-                    `}
-                  >
-                    <div className="flex items-center gap-3">
-                      <span className="text-xs font-black text-slate-400 w-5 text-center">
-                        {idx + 1}
-                      </span>
-                      <img
-                        src={player.avatarUrl || `https://api.dicebear.com/7.x/bottts/svg?seed=${player.username}`}
-                        alt="Avatar"
-                        className="w-9 h-9 rounded-lg bg-slate-100 dark:bg-slate-800 object-contain p-0.5 border border-slate-200/15"
-                      />
-                      <span className={`text-sm font-bold ${player.isSelf ? "text-indigo-600 dark:text-indigo-400" : "text-slate-700 dark:text-slate-300"}`}>
-                        {player.username}
-                      </span>
+                const remainingList = currentList.slice(3);
+
+                return (
+                  <div className="space-y-3">
+                    {/* Top 3 Podium */}
+                    <div className="flex items-end justify-center gap-3 my-6 pt-4 pb-2 border-b border-slate-200/40 dark:border-slate-800/40">
+                      {/* 2nd Place */}
+                      {currentList[1] && (
+                        <div className="flex flex-col items-center min-w-0">
+                          <div className="relative mb-2">
+                            <img
+                              src={currentList[1].avatarUrl || `https://api.dicebear.com/7.x/bottts/svg?seed=${currentList[1].username}`}
+                              alt="Silver Avatar"
+                              className="w-11 h-11 rounded-full border-2 border-slate-300 dark:border-slate-400 bg-slate-100 dark:bg-slate-900 p-0.5 object-contain"
+                            />
+                            <span className="absolute -bottom-1 -right-1 bg-slate-300 dark:bg-slate-400 text-[9px] font-black text-slate-850 rounded-full w-4.5 h-4.5 flex items-center justify-center border border-white dark:border-slate-900 shadow">
+                              2
+                            </span>
+                          </div>
+                          <span className="text-[10px] font-extrabold text-slate-700 dark:text-slate-300 truncate max-w-[70px] block">
+                            {currentList[1].username}
+                          </span>
+                          <span className="text-[9px] text-slate-400 font-semibold block">{currentList[1].value}</span>
+                          <div className="w-12 bg-slate-200 dark:bg-slate-800/70 h-8 rounded-t-lg mt-2 flex items-center justify-center font-bold text-slate-500 dark:text-slate-400 text-[10px]">
+                            2nd
+                          </div>
+                        </div>
+                      )}
+
+                      {/* 1st Place */}
+                      {currentList[0] && (
+                        <div className="flex flex-col items-center min-w-0 -translate-y-1.5">
+                          <div className="relative mb-2">
+                            <div className="absolute -inset-1 bg-gradient-to-r from-amber-400 to-yellow-500 rounded-full blur opacity-30 animate-pulse" />
+                            <img
+                              src={currentList[0].avatarUrl || `https://api.dicebear.com/7.x/bottts/svg?seed=${currentList[0].username}`}
+                              alt="Gold Avatar"
+                              className="w-14 h-14 rounded-full border-2 border-amber-400 bg-slate-100 dark:bg-slate-900 p-0.5 object-contain relative z-10"
+                            />
+                            <span className="absolute -bottom-1 -right-1 bg-amber-400 text-[10px] font-black text-slate-900 rounded-full w-5 h-5 flex items-center justify-center border border-white dark:border-slate-900 shadow-md z-20">
+                              1
+                            </span>
+                          </div>
+                          <span className="text-xs font-black text-slate-800 dark:text-white truncate max-w-[80px] block relative z-10">
+                            👑 {currentList[0].username}
+                          </span>
+                          <span className="text-[9px] text-amber-500 font-extrabold block relative z-10">{currentList[0].value}</span>
+                          <div className="w-14 bg-amber-400/20 dark:bg-amber-500/10 dark:border dark:border-amber-500/20 h-12 rounded-t-lg mt-2 flex items-center justify-center font-black text-amber-600 dark:text-amber-400 text-[10px] shadow-sm">
+                            1st
+                          </div>
+                        </div>
+                      )}
+
+                      {/* 3rd Place */}
+                      {currentList[2] && (
+                        <div className="flex flex-col items-center min-w-0">
+                          <div className="relative mb-2">
+                            <img
+                              src={currentList[2].avatarUrl || `https://api.dicebear.com/7.x/bottts/svg?seed=${currentList[2].username}`}
+                              alt="Bronze Avatar"
+                              className="w-11 h-11 rounded-full border-2 border-amber-700/50 bg-slate-100 dark:bg-slate-900 p-0.5 object-contain"
+                            />
+                            <span className="absolute -bottom-1 -right-1 bg-amber-700/70 text-[9px] font-black text-white rounded-full w-4.5 h-4.5 flex items-center justify-center border border-white dark:border-slate-900 shadow">
+                              3
+                            </span>
+                          </div>
+                          <span className="text-[10px] font-extrabold text-slate-700 dark:text-slate-300 truncate max-w-[70px] block">
+                            {currentList[2].username}
+                          </span>
+                          <span className="text-[9px] text-slate-400 font-semibold block">{currentList[2].value}</span>
+                          <div className="w-12 bg-amber-700/10 dark:bg-amber-900/15 h-7 rounded-t-lg mt-2 flex items-center justify-center font-bold text-amber-700/80 dark:text-amber-500 text-[10px]">
+                            3rd
+                          </div>
+                        </div>
+                      )}
                     </div>
-                    
-                    <div className="text-right">
-                      <span className="text-sm font-extrabold text-slate-900 dark:text-white block">
-                        {player.value}
-                      </span>
+
+                    {/* Remaining Ranks List */}
+                    <div className="space-y-2">
+                      {remainingList.map((player, idx) => (
+                        <motion.div
+                          layout
+                          key={player.id || idx}
+                          initial={{ opacity: 0, y: 5 }}
+                          animate={{ opacity: 1, y: 0 }}
+                          className={`
+                            flex items-center justify-between p-3 rounded-xl border transition-all duration-200
+                            ${
+                              player.isSelf
+                                ? "bg-indigo-50/50 dark:bg-indigo-950/20 border-indigo-500/30"
+                                : "bg-white/40 dark:bg-slate-900/10 border-slate-100 dark:border-slate-900/50"
+                            }
+                          `}
+                        >
+                          <div className="flex items-center gap-3">
+                            <span className="text-[9px] font-black text-slate-400 w-5 text-center flex flex-col items-center">
+                              <span>{idx + 4}</span>
+                              <span className={idx % 2 === 0 ? "text-emerald-500 text-[7px]" : "text-rose-500 text-[7px]"}>
+                                {idx % 2 === 0 ? "↑" : "↓"}
+                              </span>
+                            </span>
+                            <img
+                              src={player.avatarUrl || `https://api.dicebear.com/7.x/bottts/svg?seed=${player.username}`}
+                              alt="Avatar"
+                              className="w-8 h-8 rounded-lg bg-slate-100 dark:bg-slate-800 object-contain p-0.5 border border-slate-200/15"
+                            />
+                            <span className={`text-xs font-bold ${player.isSelf ? "text-indigo-600 dark:text-indigo-400" : "text-slate-700 dark:text-slate-300"}`}>
+                              {player.username}
+                            </span>
+                          </div>
+                          
+                          <div className="text-right">
+                            <span className="text-xs font-extrabold text-slate-900 dark:text-white block">
+                              {player.value}
+                            </span>
+                          </div>
+                        </motion.div>
+                      ))}
                     </div>
                   </div>
-                ));
+                );
               })()}
             </div>
             

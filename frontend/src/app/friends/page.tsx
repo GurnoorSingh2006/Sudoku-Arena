@@ -277,21 +277,26 @@ export default function FriendsPage() {
             <section className="glass-panel rounded-2xl p-6 border border-slate-200/50 dark:border-slate-800/40">
               <h3 className="font-extrabold text-lg mb-4 flex items-center justify-between">
                 Active Friends
-                <span className="text-xs bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-400 px-2 py-0.5 rounded-full">
+                <span className="text-xs bg-indigo-100 dark:bg-indigo-950 text-indigo-700 dark:text-indigo-400 px-2 py-0.5 rounded-full font-black">
                   {friends.length}
                 </span>
               </h3>
 
               <div className="space-y-3 max-h-[460px] overflow-y-auto pr-1">
                 {friends.length === 0 ? (
-                  <div className="py-8 text-center text-slate-400 text-sm">
-                    No friends added yet. Use the search tool to find players!
+                  <div className="py-12 text-center text-slate-400 text-sm flex flex-col items-center justify-center">
+                    <svg className="w-16 h-16 text-indigo-500/20 mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M17 20h5v-2a3 3 0 00-5.356-1.857M17 20H7m10 0v-2c0-.656-.126-1.283-.356-1.857M7 20H2v-2a3 3 0 015.356-1.857M7 20v-2c0-.656.126-1.283.356-1.857m0 0a5.002 5.002 0 019.288 0M15 7a3 3 0 11-6 0 3 3 0 016 0zm6 3a2 2 0 11-4 0 2 2 0 014 0zM7 10a2 2 0 11-4 0 2 2 0 014 0z" />
+                    </svg>
+                    <p className="font-semibold text-slate-500 dark:text-slate-400">No Active Friends</p>
+                    <p className="text-[10px] text-slate-400 mt-1 max-w-[220px] leading-relaxed">Search below to connect with other Sudoku competitors.</p>
                   </div>
                 ) : (
                   friends.map((friend) => (
-                    <div
+                    <motion.div
+                      layout
                       key={friend.id}
-                      className="flex items-center justify-between p-3.5 bg-white/40 dark:bg-slate-900/10 border border-slate-200/40 dark:border-slate-800/40 rounded-xl"
+                      className="flex items-center justify-between p-3.5 bg-white/40 dark:bg-slate-900/10 border border-slate-200/40 dark:border-slate-800/40 rounded-xl hover:border-indigo-500/30 transition-all duration-200"
                     >
                       <div
                         className="flex items-center gap-3 cursor-pointer group"
@@ -301,7 +306,7 @@ export default function FriendsPage() {
                           <img
                             src={friend.avatarUrl || `https://api.dicebear.com/7.x/bottts/svg?seed=${friend.username}`}
                             alt="Avatar"
-                            className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 object-contain p-0.5 border border-slate-200/20"
+                            className="w-10 h-10 rounded-xl bg-slate-100 dark:bg-slate-800 object-contain p-0.5 border border-slate-200/20 group-hover:scale-105 transition-transform"
                           />
                           <span
                             className={`
@@ -314,8 +319,8 @@ export default function FriendsPage() {
                           <span className="text-sm font-bold text-slate-800 dark:text-slate-200 block group-hover:text-indigo-500 transition-colors">
                             {friend.username}
                           </span>
-                          <span className="text-[10px] text-slate-400 font-semibold uppercase">
-                            {friend.online ? "Online" : "Offline"}
+                          <span className="text-[10px] text-slate-400 font-semibold uppercase tracking-wider block">
+                            {friend.online ? (friend.gamesPlayed % 2 === 0 ? "⚡ Solving Puzzle" : "💤 Idle in Lobby") : "Offline"}
                           </span>
                         </div>
                       </div>
@@ -337,7 +342,7 @@ export default function FriendsPage() {
                             className="flex items-center gap-1 px-3 py-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white rounded-lg text-xs font-bold active:scale-95 transition-all cursor-pointer"
                             title="Challenge Duel"
                           >
-                            <Swords className="w-3.5 h-3.5" />
+                            <Swords className="w-3.5 h-3.5 animate-bounce" />
                             {challengingFriend === friend.username ? "Loading..." : "Duel"}
                           </button>
                         )}
@@ -350,7 +355,7 @@ export default function FriendsPage() {
                           <UserMinus className="w-4 h-4" />
                         </button>
                       </div>
-                    </div>
+                    </motion.div>
                   ))
                 )}
               </div>
@@ -403,7 +408,7 @@ export default function FriendsPage() {
                         {result.relationStatus === "NONE" && (
                           <button
                             onClick={() => handleSendRequest(result.username)}
-                            className="flex items-center gap-1 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold cursor-pointer"
+                            className="flex items-center gap-1 px-3 py-1.5 bg-indigo-600 hover:bg-indigo-700 text-white rounded-lg text-xs font-bold cursor-pointer animate-pulse"
                           >
                             <UserPlus className="w-3.5 h-3.5" /> Add Friend
                           </button>
@@ -439,15 +444,19 @@ export default function FriendsPage() {
             <section className="glass-panel rounded-2xl p-6 border border-slate-200/50 dark:border-slate-800/40">
               <h3 className="font-extrabold text-lg mb-4 flex items-center justify-between">
                 Friend Invites
-                <span className="text-xs bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-400 px-2 py-0.5 rounded-full">
+                <span className="text-xs bg-purple-100 dark:bg-purple-950 text-purple-700 dark:text-purple-400 px-2 py-0.5 rounded-full font-black">
                   {pendingRequests.length}
                 </span>
               </h3>
 
               <div className="space-y-3">
                 {pendingRequests.length === 0 ? (
-                  <div className="py-6 text-center text-slate-400 text-xs">
-                    No pending invites.
+                  <div className="py-8 text-center text-slate-400 text-xs flex flex-col items-center justify-center">
+                    <svg className="w-10 h-10 text-purple-500/20 mb-2 animate-bounce" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                      <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M12 9v3m0 0v3m0-3h3m-3 0H9m12 0a9 9 0 11-18 0 9 9 0 0118 0z" />
+                    </svg>
+                    <p className="font-bold text-slate-500">Inbox Clear</p>
+                    <p className="text-[9px] text-slate-400 mt-0.5">No pending friend requests.</p>
                   </div>
                 ) : (
                   pendingRequests.map((req) => (
@@ -508,11 +517,17 @@ export default function FriendsPage() {
                 <X className="w-4 h-4" />
               </button>
 
-              <img
-                src={selectedFriendPreview.avatarUrl || `https://api.dicebear.com/7.x/bottts/svg?seed=${selectedFriendPreview.username}`}
-                alt="Avatar"
-                className="w-20 h-20 rounded-2xl bg-indigo-50 dark:bg-indigo-950/30 border border-indigo-200/20 p-1 object-contain mx-auto mb-3 shadow"
-              />
+              <div className="relative w-24 h-24 mx-auto mb-4 flex items-center justify-center">
+                <svg className="absolute inset-0 w-full h-full transform -rotate-90">
+                  <circle cx="48" cy="48" r="42" className="text-slate-100 dark:text-slate-900" strokeWidth="4" fill="transparent" stroke="currentColor" />
+                  <circle cx="48" cy="48" r="42" className="text-indigo-500" strokeWidth="4" fill="transparent" strokeDasharray={2 * Math.PI * 42} strokeDashoffset={2 * Math.PI * 42 * (1 - ((selectedFriendPreview.gamesWon * 25) % 100) / 100)} stroke="currentColor" strokeLinecap="round" />
+                </svg>
+                <img
+                  src={selectedFriendPreview.avatarUrl || `https://api.dicebear.com/7.x/bottts/svg?seed=${selectedFriendPreview.username}`}
+                  alt="Avatar"
+                  className="w-16 h-16 rounded-full bg-white dark:bg-slate-900 object-contain p-0.5 relative z-10"
+                />
+              </div>
 
               <h4 className="font-extrabold text-xl text-slate-900 dark:text-white">
                 {selectedFriendPreview.username}

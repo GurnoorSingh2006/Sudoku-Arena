@@ -12,6 +12,7 @@ import NumberPad from "@/components/NumberPad";
 import GameControls from "@/components/GameControls";
 import RaceTimeline from "@/components/RaceTimeline";
 import { synth } from "@/utils/synth";
+import Confetti from "@/components/Confetti";
 
 interface RoomPlayer {
   username: string;
@@ -589,6 +590,7 @@ export default function MultiplayerGamePage() {
           isPaused={false} // Disable pause in multiplayer
           isCompleted={isCompleted}
         />
+        <Confetti active={isCompleted} />
 
         {!isSpectator ? (
           <>

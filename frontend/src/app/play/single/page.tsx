@@ -11,6 +11,7 @@ import NumberPad from "@/components/NumberPad";
 import GameControls from "@/components/GameControls";
 import RaceTimeline from "@/components/RaceTimeline";
 import { synth } from "@/utils/synth";
+import Confetti from "@/components/Confetti";
 
 function SinglePlayerGameContent() {
   const router = useRouter();
@@ -239,6 +240,7 @@ function SinglePlayerGameContent() {
           isPaused={isPaused}
           isCompleted={isCompleted}
         />
+        <Confetti active={isCompleted} />
 
         {/* Action Controls */}
         <GameControls

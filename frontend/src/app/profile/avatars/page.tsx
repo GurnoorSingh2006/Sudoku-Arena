@@ -167,13 +167,13 @@ export default function AvatarsPage() {
                 animate={{ opacity: 1, scale: 1 }}
                 exit={{ opacity: 0, scale: 0.9 }}
                 className={`
-                  glass-panel rounded-2xl p-4 border flex flex-col items-center justify-between text-center relative overflow-hidden transition-all duration-200
+                  glass-panel rounded-3xl p-5 border flex flex-col items-center justify-between text-center relative overflow-hidden transition-all duration-300 shadow-premium hover:shadow-xl hover:-translate-y-1 group
                   ${
                     avatar.equipped
-                      ? "border-indigo-500 ring-2 ring-indigo-500/20 bg-indigo-500/5"
+                      ? "border-indigo-500 ring-2 ring-indigo-500/25 bg-indigo-500/5 dark:bg-indigo-950/20"
                       : avatar.unlocked
-                      ? "border-slate-200/50 dark:border-slate-800/40 bg-white/40 dark:bg-slate-900/10 hover:border-slate-300 dark:hover:border-slate-700"
-                      : "border-slate-200/40 dark:border-slate-900/30 bg-slate-100/50 dark:bg-slate-950/20 opacity-80"
+                      ? "border-slate-200/50 dark:border-slate-800/40 bg-white/40 dark:bg-slate-900/10 hover:border-indigo-500/30"
+                      : "border-slate-200/30 dark:border-slate-900/10 bg-slate-100/50 dark:bg-slate-950/10 opacity-70"
                   }
                 `}
               >
@@ -183,13 +183,13 @@ export default function AvatarsPage() {
                     src={avatar.url}
                     alt={avatar.name}
                     className={`
-                      w-20 h-20 rounded-2xl bg-indigo-50 dark:bg-indigo-950/40 object-contain p-1 border border-indigo-200/10
-                      ${!avatar.unlocked ? "filter grayscale contrast-75 brightness-75" : ""}
+                      w-20 h-20 rounded-2xl bg-indigo-50 dark:bg-indigo-950/40 object-contain p-1 border border-indigo-200/10 transition-transform duration-300 group-hover:scale-105
+                      ${!avatar.unlocked ? "filter grayscale opacity-45 blur-[0.5px]" : ""}
                     `}
                   />
                   {!avatar.unlocked && (
-                    <div className="absolute inset-0 bg-slate-950/40 backdrop-blur-[1px] rounded-2xl flex items-center justify-center text-white">
-                      <Lock className="w-5 h-5" />
+                    <div className="absolute inset-0 bg-slate-950/30 backdrop-blur-[0.5px] rounded-2xl flex items-center justify-center text-white">
+                      <Lock className="w-4 h-4 text-slate-200" />
                     </div>
                   )}
                 </div>
@@ -212,21 +212,21 @@ export default function AvatarsPage() {
                 {/* Equip Action Button */}
                 <div className="w-full">
                   {avatar.equipped ? (
-                    <div className="flex items-center justify-center gap-1 text-xs font-bold text-indigo-500 py-2">
+                    <div className="flex items-center justify-center gap-1 text-xs font-bold py-2 text-indigo-500">
                       <CheckCircle className="w-4 h-4" /> Equipped
                     </div>
                   ) : avatar.unlocked ? (
                     <button
                       disabled={equippingId !== null}
                       onClick={() => handleEquip(avatar.id)}
-                      className="w-full py-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-xs font-bold rounded-xl active:scale-[0.98] transition-all cursor-pointer"
+                      className="w-full py-2 bg-indigo-600 hover:bg-indigo-700 disabled:opacity-50 text-white text-xs font-bold rounded-xl active:scale-[0.98] transition-all cursor-pointer shadow-md shadow-indigo-500/10"
                     >
                       Equip
                     </button>
                   ) : (
                     <button
                       disabled
-                      className="w-full py-2 bg-slate-200 dark:bg-slate-800 text-slate-400 text-xs font-bold rounded-xl cursor-not-allowed"
+                      className="w-full py-2 bg-slate-200 dark:bg-slate-850 text-slate-400 text-xs font-bold rounded-xl cursor-not-allowed border border-slate-200/50 dark:border-slate-800/10"
                     >
                       Locked
                     </button>
