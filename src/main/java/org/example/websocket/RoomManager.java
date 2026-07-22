@@ -42,7 +42,11 @@ public class RoomManager {
         }
 
         // Add player
-        RoomPlayer player = room.getPlayers().computeIfAbsent(username, u -> new RoomPlayer(u, avatarUrl));
+        RoomPlayer player = room.getPlayers().computeIfAbsent(username, u -> {
+            RoomPlayer rp = new RoomPlayer(u, avatarUrl);
+            rp.setCurrentBoard(room.getBoard());
+            return rp;
+        });
         
         // First player to join becomes the host
         if (room.getHostUsername() == null) {
@@ -65,7 +69,7 @@ public class RoomManager {
         return room;
     }
 
-    public Room updateProgress(String roomCode, String username, int completedCells, int mistakes) {
+    public Room updateProgress(String roomCode, String username, int completedCells, int mistakes, int[][] currentBoard) {
         Room room = getRoom(roomCode);
         if (room == null) return null;
 
@@ -73,6 +77,7 @@ public class RoomManager {
         if (player != null) {
             player.setCompletedCells(completedCells);
             player.setMistakes(mistakes);
+            player.setCurrentBoard(currentBoard);
             int percentage = (int) ((completedCells / 81.0) * 100);
             player.setCompletionPercentage(Math.min(percentage, 100));
 

@@ -17,7 +17,54 @@ export default function RegisterPage() {
   const [loading, setLoading] = useState(false);
   const [theme, setTheme] = useState("light");
 
-  // Load and apply dark theme
+  const decodeJwt = (token: string) => {
+    try {
+      const base64Url = token.split(".")[1];
+      const base64 = base64Url.replace(/-/g, "+").replace(/_/g, "/");
+      const jsonPayload = decodeURIComponent(
+        window.atob(base64)
+          .split("")
+          .map((c) => "%" + ("00" + c.charCodeAt(0).toString(16)).slice(-2))
+          .join("")
+      );
+      return JSON.parse(jsonPayload);
+    } catch (e) {
+      return null;
+    }
+  };
+
+  const handleGoogleCredentialResponse = async (response: any) => {
+    const idToken = response.credential;
+    const profile = decodeJwt(idToken);
+    if (!profile) {
+      setError("Failed to parse Google profile.");
+      return;
+    }
+
+    setLoading(true);
+    setError("");
+    try {
+      const data = await apiFetch("/api/auth/google", {
+        method: "POST",
+        body: JSON.stringify({
+          email: profile.email,
+          name: profile.name,
+          avatarUrl: profile.picture,
+        }),
+      });
+      setAuthToken(data.token);
+      setStoredUser(data);
+      if (synth) synth.playSuccess();
+      router.push("/dashboard");
+    } catch (err: any) {
+      setError(err.message || "Google Login failed.");
+      if (synth) synth.playMistake();
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  // Load and apply dark theme & Google Sign-in SDK
   useEffect(() => {
     const saved = localStorage.getItem("sudoku_theme") || "light";
     setTheme(saved);
@@ -30,7 +77,33 @@ export default function RegisterPage() {
     // Redirect if already logged in
     if (getStoredUser()) {
       router.push("/dashboard");
+      return;
     }
+
+    // Load Google GIS script dynamically
+    const script = document.createElement("script");
+    script.src = "https://accounts.google.com/gsi/client";
+    script.async = true;
+    script.defer = true;
+    document.body.appendChild(script);
+
+    script.onload = () => {
+      const g = (window as any).google;
+      if (g) {
+        g.accounts.id.initialize({
+          client_id: process.env.NEXT_PUBLIC_GOOGLE_CLIENT_ID || "1046898967812-pqkpq7q8hve8r0d36m38kefb80o1l4ep.apps.googleusercontent.com",
+          callback: handleGoogleCredentialResponse,
+        });
+        g.accounts.id.renderButton(
+          document.getElementById("google-signin-btn-container"),
+          { theme: "outline", size: "large", width: 280, shape: "rectangular" }
+        );
+      }
+    };
+
+    return () => {
+      document.body.removeChild(script);
+    };
   }, [router]);
 
   const toggleTheme = () => {
@@ -183,6 +256,23 @@ export default function RegisterPage() {
               )}
             </button>
           </form>
+
+          {/* Separation Line */}
+          <div className="mt-6 relative">
+            <div className="absolute inset-0 flex items-center">
+              <div className="w-full border-t border-slate-200 dark:border-slate-800" />
+            </div>
+            <div className="relative flex justify-center text-xs uppercase">
+              <span className="px-2 bg-slate-50 dark:bg-[#0e1628] text-slate-500 dark:text-slate-400">
+                Or continue with
+              </span>
+            </div>
+          </div>
+
+          {/* Social Sign-In */}
+          <div className="mt-6 flex justify-center">
+            <div id="google-signin-btn-container" className="w-full flex justify-center"></div>
+          </div>
 
           {/* Login Link */}
           <p className="mt-8 text-center text-sm text-slate-500 dark:text-slate-400">

@@ -10,7 +10,7 @@ export function useSudoku(
   initialGrid: number[][],
   solutionGrid: number[][],
   difficulty: string,
-  onProgressUpdate?: (completed: number, mistakes: number) => void,
+  onProgressUpdate?: (completed: number, mistakes: number, currentBoard: number[][]) => void,
   onGameComplete?: (time: number, mistakes: number, hints: number) => void
 ) {
   const [board, setBoard] = useState<number[][]>(() =>
@@ -169,7 +169,7 @@ export function useSudoku(
       // Report progress (multiplayer hook)
       if (onProgressUpdate) {
         const completed = getCompletedCellsCount(newBoard);
-        onProgressUpdate(completed, newMistakes);
+        onProgressUpdate(completed, newMistakes, newBoard);
       }
 
       // Check if board solved
@@ -213,7 +213,7 @@ export function useSudoku(
     if (synth) synth.playClick();
 
     if (onProgressUpdate) {
-      onProgressUpdate(getCompletedCellsCount(newBoard), mistakeCount);
+      onProgressUpdate(getCompletedCellsCount(newBoard), mistakeCount, newBoard);
     }
   };
 
@@ -231,7 +231,7 @@ export function useSudoku(
     if (synth) synth.playClick();
 
     if (onProgressUpdate) {
-      onProgressUpdate(getCompletedCellsCount(previous.board), mistakeCount);
+      onProgressUpdate(getCompletedCellsCount(previous.board), mistakeCount, previous.board);
     }
   };
 
@@ -249,7 +249,7 @@ export function useSudoku(
     if (synth) synth.playClick();
 
     if (onProgressUpdate) {
-      onProgressUpdate(getCompletedCellsCount(next.board), mistakeCount);
+      onProgressUpdate(getCompletedCellsCount(next.board), mistakeCount, next.board);
     }
   };
 
@@ -301,7 +301,7 @@ export function useSudoku(
     }
 
     if (onProgressUpdate) {
-      onProgressUpdate(getCompletedCellsCount(newBoard), mistakeCount);
+      onProgressUpdate(getCompletedCellsCount(newBoard), mistakeCount, newBoard);
     }
 
     checkWinCondition(newBoard, mistakeCount);
@@ -319,7 +319,7 @@ export function useSudoku(
     if (synth) synth.playSuccess();
 
     if (onProgressUpdate) {
-      onProgressUpdate(81, mistakeCount);
+      onProgressUpdate(81, mistakeCount, newBoard);
     }
 
     if (onGameComplete) {
@@ -338,7 +338,7 @@ export function useSudoku(
     if (synth) synth.playClick();
 
     if (onProgressUpdate) {
-      onProgressUpdate(getCompletedCellsCount(newBoard), 0);
+      onProgressUpdate(getCompletedCellsCount(newBoard), 0, newBoard);
     }
   };
 

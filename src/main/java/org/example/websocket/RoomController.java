@@ -94,7 +94,8 @@ public class RoomController {
                 payload.getRoomCode(),
                 payload.getUsername(),
                 payload.getCompletedCells(),
-                payload.getMistakes()
+                payload.getMistakes(),
+                payload.getCurrentBoard()
         );
         if (room != null) {
             broadcastRoomState(room);
@@ -257,6 +258,7 @@ public class RoomController {
         private String username;
         private int completedCells;
         private int mistakes;
+        private int[][] currentBoard;
 
         public String getRoomCode() { return roomCode; }
         public void setRoomCode(String roomCode) { this.roomCode = roomCode; }
@@ -266,6 +268,8 @@ public class RoomController {
         public void setCompletedCells(int completedCells) { this.completedCells = completedCells; }
         public int getMistakes() { return mistakes; }
         public void setMistakes(int mistakes) { this.mistakes = mistakes; }
+        public int[][] getCurrentBoard() { return currentBoard; }
+        public void setCurrentBoard(int[][] currentBoard) { this.currentBoard = currentBoard; }
     }
 
     public static class FinishPayload {

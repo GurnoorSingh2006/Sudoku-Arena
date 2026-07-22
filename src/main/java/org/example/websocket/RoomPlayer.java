@@ -8,6 +8,7 @@ public class RoomPlayer {
     private int mistakes = 0;
     private boolean finished = false;
     private int solveTimeSeconds = 0;
+    private int[][] currentBoard;
 
     public RoomPlayer() {}
 
@@ -17,6 +18,8 @@ public class RoomPlayer {
     }
 
     // Getters and Setters
+    public int[][] getCurrentBoard() { return currentBoard; }
+    public void setCurrentBoard(int[][] currentBoard) { this.currentBoard = currentBoard; }
     public String getUsername() { return username; }
     public void setUsername(String username) { this.username = username; }
 

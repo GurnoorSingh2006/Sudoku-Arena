@@ -565,32 +565,96 @@ export default function DashboardPage() {
                   </div>
                 ) : (
                   activeRooms.map((roomItem: any) => {
-                    const playerNames = Object.keys(roomItem.players || {});
+                    const playersList = Object.values(roomItem.players || {}) as any[];
                     return (
                       <div
                         key={roomItem.roomCode}
-                        className="p-3 bg-white/40 dark:bg-slate-900/10 border border-slate-200/40 dark:border-slate-800/40 rounded-xl flex items-center justify-between text-xs"
+                        className="p-4 bg-white/40 dark:bg-slate-900/10 border border-slate-200/45 dark:border-slate-800/45 rounded-2xl flex flex-col justify-between gap-3 shadow-sm hover:border-rose-500/20 transition-all duration-300"
                       >
-                        <div className="min-w-0">
-                          <span className="font-extrabold text-slate-800 dark:text-slate-200 block">
-                            Room #{roomItem.roomCode}
+                        <div className="flex items-center justify-between">
+                          <span className="font-black text-slate-800 dark:text-white uppercase tracking-wider text-[10px] bg-slate-100 dark:bg-slate-850 px-2 py-0.5 rounded-md">
+                            Room {roomItem.roomCode}
                           </span>
-                          <span className="text-[10px] text-slate-400 font-bold block uppercase mt-0.5">
-                            {roomItem.difficulty} • {playerNames.length} Players
-                          </span>
-                          <span className="text-[9px] text-indigo-500 font-black block mt-0.5">
-                            Status: {roomItem.state}
+                          <span className="text-[10px] font-black text-rose-500 bg-rose-500/15 border border-rose-500/20 px-2 py-0.5 rounded-full uppercase tracking-wider flex items-center gap-1">
+                            <span className="w-1.5 h-1.5 rounded-full bg-rose-500 animate-ping" />
+                            Live
                           </span>
                         </div>
-                        <button
-                          onClick={() => {
-                            if (synth) synth.playClick();
-                            router.push(`/play/multi/${roomItem.roomCode}?spectate=true`);
-                          }}
-                          className="px-3 py-2 bg-rose-600 hover:bg-rose-700 text-white rounded-lg font-bold shadow-md shadow-rose-500/10 active:scale-95 transition-all cursor-pointer"
-                        >
-                          Spectate
-                        </button>
+
+                        {/* Players VS Layout */}
+                        <div className="flex items-center justify-between gap-2 py-1">
+                          {playersList.length === 0 ? (
+                            <span className="text-slate-400 font-semibold text-[10px]">No players joined yet</span>
+                          ) : playersList.length === 1 ? (
+                            <div className="flex items-center gap-1.5">
+                              <img
+                                src={playersList[0].avatarUrl || `https://api.dicebear.com/7.x/bottts/svg?seed=${playersList[0].username}`}
+                                alt="Avatar"
+                                className="w-6 h-6 rounded-md bg-slate-100 dark:bg-slate-800 p-0.5 object-contain"
+                              />
+                              <span className="font-extrabold text-slate-850 dark:text-slate-250 truncate max-w-[100px] text-[11px]">
+                                {playersList[0].username}
+                              </span>
+                              <span className="text-[10px] text-slate-400 font-semibold">waiting...</span>
+                            </div>
+                          ) : (
+                            <div className="flex items-center justify-between w-full">
+                              {/* Player 1 */}
+                              <div className="flex items-center gap-2 min-w-0">
+                                <img
+                                  src={playersList[0].avatarUrl || `https://api.dicebear.com/7.x/bottts/svg?seed=${playersList[0].username}`}
+                                  alt="Avatar"
+                                  className="w-7 h-7 rounded-lg bg-slate-100 dark:bg-slate-800 p-0.5 object-contain"
+                                />
+                                <div className="flex flex-col min-w-0">
+                                  <span className="font-black text-slate-800 dark:text-slate-200 truncate max-w-[80px] text-[11px]">
+                                    {playersList[0].username}
+                                  </span>
+                                  <span className="text-[9px] font-bold text-indigo-500">
+                                    {playersList[0].completionPercentage || 0}%
+                                  </span>
+                                </div>
+                              </div>
+
+                              {/* VS badge */}
+                              <span className="text-[9px] font-black text-slate-400 px-1 py-0.5 bg-slate-100 dark:bg-slate-800 rounded">
+                                VS
+                              </span>
+
+                              {/* Player 2 */}
+                              <div className="flex items-center gap-2 min-w-0 justify-end text-right">
+                                <div className="flex flex-col min-w-0">
+                                  <span className="font-black text-slate-800 dark:text-slate-200 truncate max-w-[80px] text-[11px]">
+                                    {playersList[1].username}
+                                  </span>
+                                  <span className="text-[9px] font-bold text-indigo-500">
+                                    {playersList[1].completionPercentage || 0}%
+                                  </span>
+                                </div>
+                                <img
+                                  src={playersList[1].avatarUrl || `https://api.dicebear.com/7.x/bottts/svg?seed=${playersList[1].username}`}
+                                  alt="Avatar"
+                                  className="w-7 h-7 rounded-lg bg-slate-100 dark:bg-slate-800 p-0.5 object-contain"
+                                />
+                              </div>
+                            </div>
+                          )}
+                        </div>
+
+                        <div className="flex items-center justify-between border-t border-slate-100 dark:border-slate-850 pt-2.5 mt-1">
+                          <span className="text-[9px] text-slate-400 font-extrabold uppercase tracking-wide">
+                            {roomItem.difficulty} • {roomItem.state}
+                          </span>
+                          <button
+                            onClick={() => {
+                              if (synth) synth.playClick();
+                              router.push(`/play/multi/${roomItem.roomCode}?spectate=true`);
+                            }}
+                            className="px-3 py-1.5 bg-rose-600 hover:bg-rose-700 text-white rounded-xl font-bold shadow-md shadow-rose-500/10 active:scale-95 transition-all cursor-pointer text-[10px]"
+                          >
+                            Spectate
+                          </button>
+                        </div>
                       </div>
                     );
                   })

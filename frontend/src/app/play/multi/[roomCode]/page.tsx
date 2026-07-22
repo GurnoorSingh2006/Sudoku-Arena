@@ -22,6 +22,7 @@ interface RoomPlayer {
   mistakes: number;
   finished: boolean;
   solveTimeSeconds: number;
+  currentBoard?: number[][];
 }
 
 interface Room {
@@ -209,10 +210,17 @@ export default function MultiplayerGamePage() {
     return () => clearInterval(interval);
   }, [room, roomCode]);
 
+  const [selectedWatchPlayer, setSelectedWatchPlayer] = useState<string | null>(null);
+
   // Hook into gameplay board states
   const initialGrid = room?.board || [];
   const solutionGrid = room?.solution || [];
   const difficulty = room?.difficulty || "Medium";
+
+  const playersList = room ? Object.values(room.players) : [];
+  const watchedPlayerUsername = selectedWatchPlayer || (playersList[0]?.username || null);
+  const watchedPlayer = room?.players[watchedPlayerUsername || ""] || null;
+  const watchedPlayerBoard = watchedPlayer?.currentBoard || initialGrid;
 
   const {
     board,
@@ -239,7 +247,7 @@ export default function MultiplayerGamePage() {
     solutionGrid,
     difficulty,
     // On cell progress: publish updates via WebSocket
-    (completed, mistakes) => {
+    (completed, mistakes, currentBoard) => {
       if (isSpectator) return;
       if (stompClient.current && room?.state === "PLAYING") {
         stompClient.current.publish({
@@ -249,6 +257,7 @@ export default function MultiplayerGamePage() {
             username: user.username,
             completedCells: completed,
             mistakes,
+            currentBoard,
           }),
         });
       }
@@ -568,6 +577,44 @@ export default function MultiplayerGamePage() {
 
       {/* Main Grid Game screen */}
       <main className="flex-1 flex flex-col justify-center relative">
+        {isSpectator && playersList.length > 0 && (
+          <div className="max-w-[460px] w-full mx-auto p-4 mb-4 rounded-2xl glass-panel border border-indigo-500/20 bg-indigo-500/5 text-xs text-center flex flex-col gap-2 relative z-30">
+            <h4 className="text-[10px] font-extrabold text-indigo-600 dark:text-indigo-400 uppercase tracking-widest flex items-center justify-center gap-1.5">
+              <span className="w-1.5 h-1.5 rounded-full bg-indigo-500 animate-ping" />
+              Watching Live: {watchedPlayerUsername || "Select Player"}
+            </h4>
+            <div className="flex flex-wrap gap-2 justify-center mt-1">
+              {playersList.map(p => {
+                const isSelected = watchedPlayerUsername === p.username;
+                return (
+                  <button
+                    key={p.username}
+                    onClick={() => {
+                      if (synth) synth.playClick();
+                      setSelectedWatchPlayer(p.username);
+                    }}
+                    className={`px-3 py-1.5 rounded-xl border font-black transition-all flex items-center gap-1.5 cursor-pointer text-xs ${
+                      isSelected
+                        ? "bg-indigo-600 border-indigo-600 text-white shadow shadow-indigo-500/20"
+                        : "bg-white/90 dark:bg-slate-900 border-slate-200 dark:border-slate-800 hover:bg-slate-50 dark:hover:bg-slate-850 text-slate-500"
+                    }`}
+                  >
+                    <img
+                      src={p.avatarUrl || `https://api.dicebear.com/7.x/bottts/svg?seed=${p.username}`}
+                      alt="Avatar"
+                      className="w-4 h-4 rounded-md object-contain bg-slate-100 dark:bg-slate-800 p-0.5"
+                    />
+                    <span>{p.username}</span>
+                    <span className={`text-[9px] font-bold ${isSelected ? "text-indigo-200" : "text-indigo-500"}`}>
+                      {p.completionPercentage}%
+                    </span>
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+        )}
+
         {/* Game Over / Failed Overlay */}
         {isGameOver && (
           <div className="absolute inset-0 z-20 flex items-center justify-center bg-slate-950/20 rounded-3xl p-4 backdrop-blur-[1px] pointer-events-none">
@@ -578,7 +625,7 @@ export default function MultiplayerGamePage() {
         )}
 
         <SudokuBoard
-          board={board}
+          board={isSpectator ? watchedPlayerBoard : board}
           notes={notes}
           initialBoard={initialGrid}
           solutionBoard={solutionGrid}
